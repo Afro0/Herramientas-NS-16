@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procedimientos Oficiales NS-16</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #0f131f;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #ffffff;
+            padding: 20px 0;
+        }
+        .menu-container {
+            background-color: #171d2d;
+            border: 2px solid #f1c40f;
+            border-radius: 12px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        }
+        .menu-title { color: #f1c40f; font-size: 22px; font-weight: bold; margin-bottom: 20px; }
+        .menu-options { display: flex; flex-direction: column; gap: 8px; max-height: 70vh; overflow-y: auto; padding-right: 5px; }
+        .btn-nivel {
+            display: block;
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 14px;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 6px;
+            background-color: #2a65e6;
+            color: #ffffff;
+            transition: background-color 0.2s, transform 0.1s;
+            text-align: left;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .btn-nivel:hover { background-color: #1e52c8; }
+        .btn-nivel:active { transform: scale(0.99); }
+        .btn-back { display: inline-block; margin-top: 15px; color: #aaa; text-decoration: none; font-size: 13px; }
+        .btn-back:hover { color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="menu-container">
+        <h1 class="menu-title">Procedimientos Operativos NS-16</h1>
+        
+        <div class="menu-options">
+            <a href="simulador.html?nivel=1" class="btn-nivel">1. Pruebas y Verificaciones (Preparación)</a>
+            <a href="simulador.html?nivel=2" class="btn-nivel">2. Bloqueo de Puertas Averiada</a>
+            <a href="simulador.html?nivel=3" class="btn-nivel">3. Liberación de Puertas (Evacuación)</a>
+            <a href="simulador.html?nivel=4" class="btn-nivel">4. Aislamiento de Frenado Neumático (XFR)</a>
+            <a href="simulador.html?nivel=5" class="btn-nivel">5. Aislamiento de Freno de Inercia (XFI)</a>
+            <a href="simulador.html?nivel=6" class="btn-nivel">6. Repliegue de Frotadores Positivos (XFP)</a>
+            <a href="simulador.html?nivel=7" class="btn-nivel">7. Reseteo del Tren (Estación / Interestación)</a>
+            <a href="simulador.html?nivel=8" class="btn-nivel">8. Reseteo Ordenador y Platina SACEM</a>
+            <a href="simulador.html?nivel=9" class="btn-nivel">9. Sistema KSA (Avance, Retroceso e Inhibición)</a>
+            <a href="simulador.html?nivel=10" class="btn-nivel">10. Persona Atrapada entre Puertas</a>
+            <a href="simulador.html?nivel=11" class="btn-nivel">11. Evacuación de Pasajeros en Interestación</a>
+        </div>
+
+        <a href="index.html" class="btn-back">← Volver al Menú Principal</a>
+    </div>
+
+</body>
+</html>

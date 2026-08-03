@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Descodificador de Conmutadores - Metro NS-16</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --card-bg: #ffffff;
+            --primary: #1e3c72;
+            --accent: #2a5298;
+            --success: #10b981;
+            --error: #ef4444;
+            --purple: #701a75;
+            --text: #1f2937;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 850px;
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        h1 { color: var(--primary); margin: 0 0 5px 0; font-size: 1.5rem; }
+        p.subtitle { color: #6b7280; margin: 0; font-size: 0.95rem; }
+
+        /* --- Menú Principal --- */
+        .menu-screen {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .menu-title {
+            font-size: 1.3rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .mode-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .mode-card {
+            background: #f8fafc;
+            border: 2px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+
+        .mode-card:hover {
+            border-color: var(--accent);
+            background: #eff6ff;
+            transform: translateY(-2px);
+        }
+
+        .mode-card h3 {
+            margin: 0 0 5px 0;
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .mode-card p {
+            margin: 0;
+            color: #64748b;
+            font-size: 0.88rem;
+        }
+
+        /* --- Interfaz de Juego --- */
+        .game-screen {
+            display: none;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-between;
+            background: #f8fafc;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .mission-box {
+            background: #eff6ff;
+            border-left: 5px solid var(--accent);
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 20px;
+        }
+
+        .mission-box h2 { margin: 0 0 8px 0; font-size: 1.1rem; color: var(--primary); }
+        .mission-box p { margin: 0; font-size: 1rem; line-height: 1.4; }
+
+        .builder-area { margin-bottom: 20px; }
+        .drop-slots {
+            display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap;
+            min-height: 65px; padding: 10px; background: #f1f5f9; border: 2px dashed #cbd5e1; border-radius: 10px;
+        }
+        .dot { font-weight: bold; font-size: 1.4rem; color: var(--primary); }
+
+        .phase-box {
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .phase-box.location { background: #fdf4ff; border-color: #f5d0fe; }
+        .phase-box.position { background: #f0fdf4; border-color: #bbf7d0; }
+
+        .phase-box h3 { margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase; }
+        .phase-box.location h3 { color: var(--purple); }
+        .phase-box.position h3 { color: #166534; }
+
+        .option-group { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+
+        .opt-btn {
+            padding: 8px 16px; border: 2px solid; background: white;
+            border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.2s;
+        }
+
+        .location-btn { border-color: #c084fc; color: var(--purple); }
+        .location-btn.selected { background: #a855f7; color: white; border-color: #9333ea; }
+
+        .pos-checkbox-btn {
+            padding: 8px 14px;
+            border: 2px solid #86efac;
+            background: white;
+            color: #166534;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .pos-checkbox-btn.selected {
+            background: #16a34a;
+            color: white;
+            border-color: #15803d;
+        }
+
+        .palette { margin-bottom: 15px; }
+        .palette h3 { font-size: 0.85rem; color: #4b5563; margin: 0 0 8px 0; text-transform: uppercase; }
+        .blocks-container { display: flex; flex-wrap: wrap; gap: 8px; }
+
+        .block {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 6px 10px; background: var(--primary); color: white; border-radius: 8px;
+            cursor: pointer; user-select: none; box-shadow: 0 3px 6px rgba(0,0,0,0.12); min-width: 65px;
+        }
+        .block.suffix { background: #0d9488; }
+        .block-title { font-size: 0.95rem; font-weight: bold; line-height: 1; }
+        .block-desc { font-size: 0.62rem; opacity: 0.9; margin-top: 3px; font-weight: normal; text-align: center; }
+
+        .controls { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
+        button.btn-action {
+            padding: 10px 24px; border: none; border-radius: 6px; font-weight: bold;
+            cursor: pointer; font-size: 0.95rem;
+        }
+        .btn-check { background: var(--accent); color: white; }
+        .btn-reset { background: #e2e8f0; color: #475569; }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5);
+            display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            z-index: 1000;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal {
+            background: white; padding: 25px; border-radius: 12px; max-width: 500px; width: 90%;
+            text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+        .modal-icon { font-size: 3rem; margin-bottom: 10px; }
+        .modal h2 { margin: 0 0 10px 0; font-size: 1.4rem; }
+        .modal p { font-size: 0.95rem; color: #4b5563; line-height: 1.4; margin-bottom: 20px; }
+        .modal.success h2 { color: var(--success); }
+        .modal.error h2 { color: var(--error); }
+        .btn-modal { padding: 10px 24px; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-modal.success { background: var(--success); }
+        .btn-modal.error { background: var(--error); }
+    </style>
+<script defer data-domain="ago4.tiiny.site" src="https://analytics.tiiny.net/js/plausible.js"></script><script type="text/javascript" src="https://tiiny.host/ad-script.js"></script></head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Metro NS-16: Armador de Conmutadores</h1>
+        <p class="subtitle">Descodificador Interactivo de Pupitre y Armario BT3</p>
+    </header>
+
+    <!-- PANTALLA MENÚ -->
+    <div class="menu-screen" id="menu-screen">
+        <h2 class="menu-title">Selecciona el módulo de evaluación:</h2>
+        <div class="mode-cards">
+            <div class="mode-card" onclick="selectMode('PUPITRE')">
+                <h3>1. Pupitre de Conducción</h3>
+                <p>Lámparas, Botones y Conmutadores del puesto de mando.</p>
+            </div>
+            <div class="mode-card" onclick="selectMode('BT3')">
+                <h3>2. Armario BT3</h3>
+                <p>17 elementos de intervención (7 Exteriores y 10 Interiores).</p>
+            </div>
+            <div class="mode-card" onclick="selectMode('MIX')">
+                <h3>3. Módulo MIX (Todo)</h3>
+                <p>Evaluación combinada en orden aleatorio.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA JUEGO -->
+    <div class="game-screen" id="game-screen">
+        <div class="score-board">
+            <span id="level-indicator">Nivel: 1 / 17</span>
+            <span id="score">Puntos: 0</span>
+        </div>
+
+        <div class="mission-box">
+            <h2>Elemento / Función a evaluar:</h2>
+            <p id="mission-text">Cargando caso...</p>
+        </div>
+
+        <!-- Paso 1: Armar Clave -->
+        <div class="builder-area">
+            <div class="drop-slots" id="drop-area">
+                <span style="color: #94a3b8; font-style: italic;">Haz clic en las siglas en orden...</span>
+            </div>
+        </div>
+
+        <!-- Paso 2: Ubicación / Tipo -->
+        <div class="phase-box location">
+            <h3 id="step2-title">Paso 2: Ubicación / Tipo de Elemento</h3>
+            <div class="option-group" id="location-options">
+                <!-- Botones dinámicos -->
+            </div>
+        </div>
+
+        <!-- Paso 3: Posiciones que posee -->
+        <div class="phase-box position">
+            <h3>Paso 3: Selecciona TODAS las posiciones que posee</h3>
+            <div class="option-group" id="position-options">
+                <!-- Checkboxes dinámicos -->
+            </div>
+        </div>
+
+        <!-- Bloques Disponibles -->
+        <div class="palette">
+            <h3>Prefijos / Iniciales (A - Z):</h3>
+            <div class="blocks-container" id="prefix-container"></div>
+        </div>
+
+        <div class="palette">
+            <h3>Sufijos / Componentes (A - Z):</h3>
+            <div class="blocks-container" id="suffix-container"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-action btn-check" onclick="checkAnswer()">Verificar Respuesta</button>
+            <button class="btn-action btn-reset" onclick="clearSlots()">Limpiar Selección</button>
+            <button class="btn-action btn-reset" onclick="goMenu()" style="background:#cbd5e1;">Menú</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Emergente -->
+<div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal-box">
+        <div class="modal-icon" id="modal-icon">🎉</div>
+        <h2 id="modal-title">¡Resultado!</h2>
+        <p id="modal-message">Mensaje...</p>
+        <button class="btn-modal" id="modal-btn" onclick="handleModalAction()">Continuar</button>
+    </div>
+</div>
+
+<script>
+    // --- BASE DE DATOS DE EVALUACIÓN ---
+    
+    // 1. ARMARIO BT3 (17)
+    const bt3Challenges = [
+        // EXTERIORES (7)
+        {
+            origin: "BT3",
+            description: "Realizar el bypass directo mediante el conmutador de Alimentación Directa para la Línea de Seguridad del tren.",
+            correctCode: ["K", "A", "DI"],
+            location: "EXTERIOR",
+            positions: ["Normal", "Directa"],
+            explanation: "<b>K.A.DI</b> (Alimentación Directa): Tiene 2 posiciones [<b>Normal / Directa</b>]. Ubicación: <b>EXTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Seleccionar el Alumbrado para las luces de la Línea Expreso (servicio verde o rojo).",
+            correctCode: ["K", "AA", "LEX"],
+            location: "EXTERIOR",
+            positions: ["Verde", "FS", "Rojo"],
+            explanation: "<b>K.AA.LEX</b> (Alumbrado Luces Expreso): Tiene 3 posiciones [<b>Verde / FS / Rojo</b>]. Ubicación: <b>EXTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Conmutador de Emergencia Tracción (falla del manipulador principal, permite traccionar con manipulador de emergencia en CML).",
+            correctCode: ["K", "SE", "TR"],
+            location: "EXTERIOR",
+            positions: ["Normal", "Emergencia"],
+            explanation: "<b>K.SE.TR</b> (Emergencia Tracción): Tiene 2 posiciones [<b>Normal / Emergencia</b>]. Ubicación: <b>EXTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Conmutador para seleccionar la fuente del sistema de radio TETRA.",
+            correctCode: ["TETRA"],
+            location: "EXTERIOR",
+            positions: ["AUTO", "FS", "Emergencia"],
+            explanation: "<b>Radio TETRA</b>: Tiene 3 posiciones [<b>AUTO / FS / Emergencia</b>]. Ubicación: <b>EXTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Conmutador de Inhibición KSA (para inhibir la acción del freno de urgencia por tiradores de pasajeros y neutralizar el timbre).",
+            correctCode: ["K", "IH", "KSA"],
+            location: "EXTERIOR",
+            positions: ["Normal", "Aislado"],
+            explanation: "<b>K.IH.KSA</b> (Inhibición KSA): Tiene 2 posiciones [<b>Normal / Aislado</b>]. Ubicación: <b>EXTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Conmutador de Liberación de Puertas (libera las puertas del lado de servicio del tren).",
+            correctCode: ["K", "LP"],
+            location: "EXTERIOR",
+            positions: ["Normal", "Liberación"],
+            explanation: "<b>K.LP</b> (Liberación de Puertas): Tiene 2 posiciones [<b>Normal / Liberación</b>]. Ubicación: <b>EXTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Pulsador para la maniobra de RESET o reinicio del equipo de pilotaje automático SACEM cuando está apagado o en falla.",
+            correctCode: ["RESET", "SACEM"],
+            location: "EXTERIOR",
+            positions: ["Pulsador / Botón"],
+            explanation: "<b>RESET SACEM</b>: Funciona mediante un <b>Pulsador / Botón</b> de reinicio. Ubicación: <b>EXTERIOR</b> del BT3."
+        },
+
+        // INTERIORES (10)
+        {
+            origin: "BT3",
+            description: "Conmutador de Aislamiento del Bucle o Lazo de Puertas del tren.",
+            correctCode: ["K", "IS", "BU.PU"],
+            location: "INTERIOR",
+            positions: ["Normal", "Bypass"],
+            explanation: "<b>K.IS.BU.PU</b> (Aislamiento Bucle Puertas): Tiene 2 posiciones [<b>Normal / Bypass</b>]. Ubicación: <b>INTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Conmutador de Alimentación de Baja Tensión (72V) para permitir la preparación ante una despreparación total.",
+            correctCode: ["K", "A", "BT"],
+            location: "INTERIOR",
+            positions: ["FS", "Normal", "Directa"],
+            explanation: "<b>K.A.BT</b> (Alimentación Baja Tensión): Tiene 3 posiciones [<b>FS / Normal / Directa</b>]. Ubicación: <b>INTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Conmutador de Aislamiento del No Desbloqueo al Frenado (habilita tracción aunque haya señalización de freno neumático).",
+            correctCode: ["K", "IS", "ND", "FR"],
+            location: "INTERIOR",
+            positions: ["Normal", "Aislado"],
+            explanation: "<b>K.IS.ND.FR</b> (Aislamiento No Desbloqueo Frenado): Tiene 2 posiciones [<b>Normal / Aislado</b>]. Ubicación: <b>INTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Conmutador de Control VAC para forzar el equipo de climatización de la sala de pasajeros.",
+            correctCode: ["CONTROL", "VAC"],
+            location: "INTERIOR",
+            positions: ["AUTO", "FS", "VENT."],
+            explanation: "<b>CONTROL VAC</b>: Tiene 3 posiciones [<b>AUTO / FS / VENT.</b>]. Ubicación: <b>INTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Provocar un Frenado de Urgencia cada vez que se detecte pérdida de Alta Tensión (exclusivo para pruebas de taller).",
+            correctCode: ["K", "FU", "VIA.P"],
+            location: "INTERIOR",
+            positions: ["FS", "VP"],
+            explanation: "<b>K.FU.VIA.P</b> (FU Vía Pruebas): Tiene 2 posiciones [<b>FS / VP</b>]. Ubicación: <b>INTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Conmutador de Aislamiento de Hombre Muerto (deja fuera de servicio el sistema VACMA por falla).",
+            correctCode: ["K", "IS", "HM"],
+            location: "INTERIOR",
+            positions: ["Normal", "Aislado"],
+            explanation: "<b>K.IS.HM</b> (Aislamiento Hombre Muerto): Tiene 2 posiciones [<b>Normal / Aislado</b>]. Ubicación: <b>INTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Conmutador de Bypass Autorización Tracción (habilita tracción ante señalización de Freno de Inmovilización FI aplicado).",
+            correctCode: ["K", "A", "TR.DI"],
+            location: "INTERIOR",
+            positions: ["Normal", "Bypass"],
+            explanation: "<b>K.A.TR.DI</b> (Bypass Autorización Tracción): Tiene 2 posiciones [<b>Normal / Bypass</b>]. Ubicación: <b>INTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Conmutador para activar el Modo Socorro TCMS ante un colapso o falla grave de la red de comunicaciones.",
+            correctCode: ["K", "SO", "TCMS"],
+            location: "INTERIOR",
+            positions: ["FS", "Socorro"],
+            explanation: "<b>K.SO.TCMS</b> (Socorro TCMS): Tiene 2 posiciones [<b>FS / Socorro</b>]. Ubicación: <b>INTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Conmutador de Inhibición de la Señal de Velocidad de 6 km/h.",
+            correctCode: ["K", "IH", "VT6"],
+            location: "INTERIOR",
+            positions: ["Normal", "Bypass"],
+            explanation: "<b>K.IH.VT6</b> (Inhibición Velocidad 6k): Tiene 2 posiciones [<b>Normal / Bypass</b>]. Ubicación: <b>INTERIOR</b> del BT3."
+        },
+        {
+            origin: "BT3",
+            description: "Botón amarillo para arrancar el cargador de baterías desde el CVS sin carga en batería.",
+            correctCode: ["PREPARACIÓN", "EMERGENCIA"],
+            location: "INTERIOR",
+            positions: ["Pulsador Amarillo"],
+            explanation: "<b>PREPARACIÓN EMERGENCIA</b>: Funciona mediante un <b>Pulsador Amarillo</b>. Ubicación: <b>INTERIOR</b> del BT3."
+        }
+    ];
+
+    // 2. PUPITRE DE CONDUCCIÓN
+    const pupitreChallenges = [
+        // LÁMPARAS
+        {
+            origin: "PUPITRE",
+            description: "INDICA PRESIÓN REDUCIDA, BOGUIE AISLADO AL FRENADO O CABINAS DESACTIVADAS.",
+            correctCode: ["VT", "PS.RED"],
+            location: "LÁMPARA",
+            positions: ["Luz de Alarma Rojo"],
+            explanation: "<b>VT.PS.RED</b>: Lámpara de alarma que indica PRESIÓN REDUCIDA, BOGUIE AISLADO AL FRENADO O CABINAS DESACTIVADAS."
+        },
+        {
+            origin: "PUPITRE",
+            description: "INDICA BOGUIES BLOQUEADOS CON UNA PRESIÓN IGUAL A UN FU.",
+            correctCode: ["VT", "FR.SR"],
+            location: "LÁMPARA",
+            positions: ["Testigo Luminoso"],
+            explanation: "<b>VT.FR.SR</b>: INDICA BOGUIES BLOQUEADOS CON UNA PRESIÓN IGUAL A UN FU."
+        },
+        {
+            origin: "PUPITRE",
+            description: "INDICA CIERRE Y ENCLAVAMIENTO DE PUERTAS (En este tren son 2; Una por lado de las puertas).",
+            correctCode: ["LMF'S"],
+            location: "LÁMPARA",
+            positions: ["Luz Indicadora de Puertas"],
+            explanation: "<b>LMF'S</b>: LÁMPARAS DE CABINA QUE INDICAN CIERRE Y ENCLAVAMIENTO DE PUERTAS."
+        },
+        {
+            origin: "PUPITRE",
+            description: "LÁMPARA DE CABINA ACTIVA.",
+            correctCode: ["VT", "N.CC"],
+            location: "LÁMPARA",
+            positions: ["Indicador de Estado"],
+            explanation: "<b>VT.N.CC</b>: LÁMPARA DE CABINA ACTIVA."
+        },
+
+        // BOTONES
+        {
+            origin: "PUPITRE",
+            description: "PERMITE PREPARAR EL TREN.",
+            correctCode: ["EN"],
+            location: "BOTÓN",
+            positions: ["Pulsador"],
+            explanation: "<b>EN</b>: PERMITE PREPARAR EL TREN."
+        },
+        {
+            origin: "PUPITRE",
+            description: "DESPREPARA EL TREN.",
+            correctCode: ["HS"],
+            location: "BOTÓN",
+            positions: ["Pulsador"],
+            explanation: "<b>HS</b>: DESPREPARA EL TREN."
+        },
+        {
+            origin: "PUPITRE",
+            description: "APLICA FRENOS DE INMOVILIZACIÓN.",
+            correctCode: ["APLICAR", "FI"],
+            location: "BOTÓN",
+            positions: ["Pulsador"],
+            explanation: "<b>APLICAR FI</b>: APLICA FRENOS DE INMOVILIZACIÓN."
+        },
+        {
+            origin: "PUPITRE",
+            description: "DESAPLICA LOS FI.",
+            correctCode: ["DESAPLICAR", "FI"],
+            location: "BOTÓN",
+            positions: ["Pulsador"],
+            explanation: "<b>DESAPLICAR FI</b>: DESAPLICA LOS FI."
+        },
+        {
+            origin: "PUPITRE",
+            description: "PUSH-TO-TALK (PRESIONE PARA HABLAR).",
+            correctCode: ["PTT"],
+            location: "BOTÓN",
+            positions: ["Pulsador"],
+            explanation: "<b>PTT</b>: PUSH-TO-TALK (PRESIONE PARA HABLAR)."
+        },
+        {
+            origin: "PUPITRE",
+            description: "HACE SONAR UN TIMBRE EN AMBAS CABINAS.",
+            correctCode: ["TIMBRE"],
+            location: "BOTÓN",
+            positions: ["Pulsador"],
+            explanation: "<b>TIMBRE</b>: HACE SONAR UN TIMBRE EN AMBAS CABINAS."
+        },
+        {
+            origin: "PUPITRE",
+            description: "SIMILAR A RPS EN NS-04.",
+            correctCode: ["MAV"],
+            location: "BOTÓN",
+            positions: ["Pulsador"],
+            explanation: "<b>MAV</b>: SIMILAR A RPS EN NS-04."
+        },
+        {
+            origin: "PUPITRE",
+            description: "ANTE DESPREPARACIÓN DEL TREN, PERMITE PRENDER ALUMBRADO DE EMERGENCIA.",
+            correctCode: ["ALUMBRADO", "DE", "EMERGENCIA"],
+            location: "BOTÓN",
+            positions: ["Pulsador"],
+            explanation: "<b>ALUMBRADO DE EMERGENCIA</b>: ANTE DESPREPARACIÓN DEL TREN, PERMITE PRENDER ALUMBRADO DE EMERGENCIA."
+        },
+        {
+            origin: "PUPITRE",
+            description: "ACTIVA EL DESEMPAÑANTE DEL PARABRISA.",
+            correctCode: ["LUNETA", "TÉRMICA"],
+            location: "BOTÓN",
+            positions: ["Pulsador"],
+            explanation: "<b>LUNETA TÉRMICA</b>: ACTIVA EL DESEMPAÑANTE DEL PARABRISA."
+        },
+        {
+            origin: "PUPITRE",
+            description: "CIERRE DE PUERTAS IZQUIERDAS.",
+            correctCode: ["FG"],
+            location: "BOTÓN",
+            positions: ["Pulsador"],
+            explanation: "<b>FG</b>: CIERRE DE PUERTAS IZQUIERDAS."
+        },
+        {
+            origin: "PUPITRE",
+            description: "CIERRA DE PUERTAS DERECHAS.",
+            correctCode: ["FD"],
+            location: "BOTÓN",
+            positions: ["Pulsador"],
+            explanation: "<b>FD</b>: CIERRA DE PUERTAS DERECHAS."
+        },
+        {
+            origin: "PUPITRE",
+            description: "ACTIVA UN FU-CA.",
+            correctCode: ["SETA", "KFU"],
+            location: "BOTÓN",
+            positions: ["Golpe de Puño"],
+            explanation: "<b>SETA KFU</b>: ACTIVA UN FU-CA."
+        },
+
+        // CONMUTADORES PUPITRE
+        {
+            origin: "PUPITRE",
+            description: "ACTIVA FARO DE EVACUACIÓN.",
+            correctCode: ["LUZ", "FRONTAL", "DE", "EVACUACIÓN"],
+            location: "CONMUTADOR",
+            positions: ["Conmutador"],
+            explanation: "<b>LUZ FRONTAL DE EVACUACIÓN</b>: ACTIVA FARO DE EVACUACIÓN."
+        },
+        {
+            origin: "PUPITRE",
+            description: "CONMUTA LUCES DE IDENTIFICACIÓN.",
+            correctCode: ["KFR"],
+            location: "CONMUTADOR",
+            positions: ["Fijas", "Apagadas", "Intermitentes"],
+            explanation: "<b>KFR</b>: CONMUTA LUCES DE IDENTIFICACIÓN (3 POSICIONES: FIJAS, APAGADAS, INTERMITENTES)."
+        },
+        {
+            origin: "PUPITRE",
+            description: "AUTORIZACIÓN PARA ABRIR PUERTAS IZQUIERDAS.",
+            correctCode: ["K", "AA", "IZ"],
+            location: "CONMUTADOR",
+            positions: ["Conmutador"],
+            explanation: "<b>K.AA.IZ</b>: AUTORIZACIÓN PARA ABRIR PUERTAS IZQUIERDAS."
+        },
+        {
+            origin: "PUPITRE",
+            description: "SELECCIONA SENTIDO DE MARCHA.",
+            correctCode: ["KLVR"],
+            location: "CONMUTADOR",
+            positions: ["Adelante", "Neutro", "Atrás"],
+            explanation: "<b>KLVR</b>: SELECCIONA SENTIDO DE MARCHA (3 POSICIONES: ADELANTE - NEUTRO - ATRÁS)."
+        },
+        {
+            origin: "PUPITRE",
+            description: "Permitirá la apertura de las puertas del tren cuando exista una falla de la señal de velocidad 6km/h, y la velocidad es inferior a 0.5km/h.",
+            correctCode: ["K", "A", "EM"],
+            location: "CONMUTADOR",
+            positions: ["Neutro", "Emergencia"],
+            explanation: "<b>K.A.EM</b>: PERMITIRÁ LA APERTURA DE PUERTAS CON V < 0.5 KM/H EN FALLA DE 6 KM/H (2 POSICIONES: NEUTRO - EMERGENCIA)."
+        },
+        {
+            origin: "PUPITRE",
+            description: "SELECTOR DE PUERTAS.",
+            correctCode: ["ST"],
+            location: "CONMUTADOR",
+            positions: ["Automático", "Izquierda", "Derecha", "Neutro"],
+            explanation: "<b>ST</b>: SELECTOR DE PUERTAS (4 POSICIONES: AUTOMÁTICO - IZQUIERDA - DERECHA - NEUTRO)."
+        },
+        {
+            origin: "PUPITRE",
+            description: "SELECCIÓN DEL MODO DE CONDUCCIÓN.",
+            correctCode: ["SC"],
+            location: "CONMUTADOR",
+            positions: ["PA", "CMC", "CM", "FS"],
+            explanation: "<b>SC</b>: SELECCIÓN DEL MODO DE CONDUCCIÓN (4 POSICIONES: PA - CMC - CM - FS)."
+        },
+        {
+            origin: "PUPITRE",
+            description: "SUBE O BAJA PARASOL.",
+            correctCode: ["CONMUTADOR", "PARASOL"],
+            location: "CONMUTADOR",
+            positions: ["Subir", "0", "Bajar"],
+            explanation: "<b>CONMUTADOR PARASOL</b>: SUBE O BAJA PARASOL (3 POSICIONES: SUBIR - 0 - BAJAR)."
+        },
+        {
+            origin: "PUPITRE",
+            description: "ACTIVA VENTILACIÓN DE CABINA.",
+            correctCode: ["CONMUTADOR", "VENTILACIÓN", "DE", "CABINA"],
+            location: "CONMUTADOR",
+            positions: ["0", "I", "II"],
+            explanation: "<b>CONMUTADOR VENTILACIÓN DE CABINA</b>: ACTIVA VENTILACIÓN DE CABINA (3 POSICIONES: 0 - I - II)."
+        },
+        {
+            origin: "PUPITRE",
+            description: "ACTIVA CALIENTAPIES.",
+            correctCode: ["CONMUTADOR", "CALEFACCIÓN", "DE", "CABINA"],
+            location: "CONMUTADOR",
+            positions: ["I", "O"],
+            explanation: "<b>CONMUTADOR CALEFACCIÓN DE CABINA</b>: ACTIVA CALIENTAPIES (2 POSICIONES: I - O)."
+        },
+        {
+            origin: "PUPITRE",
+            description: "ACTIVA LIMPIAPARABRISAS, SI SE PULSA ACTIVA SAPITO.",
+            correctCode: ["CONMUTADOR/PULSADOR"],
+            location: "CONMUTADOR",
+            positions: ["0", "I", "II", "Pulsado"],
+            explanation: "<b>CONMUTADOR/PULSADOR LIMPIAPARABRISAS</b>: (4 POSICIONES: 0 - I - II - PULSADO)."
+        },
+        {
+            origin: "PUPITRE",
+            description: "ENCIENDE ALUMBRADO DE CABINA.",
+            correctCode: ["CONMUTADOR", "ALUMBRADO", "DE", "CABINA"],
+            location: "CONMUTADOR",
+            positions: ["I", "O"],
+            explanation: "<b>CONMUTADOR ALUMBRADO DE CABINA</b>: ENCIENDE ALUMBRADO DE CABINA (2 POSICIONES: I - O)."
+        },
+        {
+            origin: "PUPITRE",
+            description: "DA ORDEN DE APERTURA O ANULA ORDEN DE APERTURA.",
+            correctCode: ["KLOAN"],
+            location: "CONMUTADOR",
+            positions: ["Neutro", "Apertura", "Anulación"],
+            explanation: "<b>KLOAN</b>: DA ORDEN DE APERTURA O ANULA ORDEN DE APERTURA (3 POSICIONES: NEUTRO - APERTURA - ANULACIÓN)."
+        },
+        {
+            origin: "PUPITRE",
+            description: "Permite la apertura de los retrovisores derecho o izquierdo, siempre que la velocidad sea inferior a 3km/h y KLVR se encuentre en posición Atrás.",
+            correctCode: ["K", "SELECTOR", "DE", "RETROVISORES"],
+            location: "CONMUTADOR",
+            positions: ["Derecha", "Neutro", "Izquierda"],
+            explanation: "<b>K SELECTOR DE RETROVISORES</b>: (3 POSICIONES: DERECHA - NEUTRO - IZQUIERDA)."
+        },
+        {
+            origin: "PUPITRE",
+            description: "MANIPULADOR DE EMERGENCIA, ACTIVO EN MODO SOCORRO Y CON TRACCIÓN Y FRENADO NO MODULABLE.",
+            correctCode: ["MP", "SE", "TR"],
+            location: "MANIPULADOR",
+            positions: ["Tracción / Frenado Socorro"],
+            explanation: "<b>MP.SE.TR</b>: MANIPULADOR DE EMERGENCIA, ACTIVO EN MODO SOCORRO Y CON TRACCIÓN Y FRENADO NO MODULABLE."
+        }
+    ];
+
+    // POSICIONES UNIFICADAS
+    const allPossiblePositions = [
+        "Normal", "Directa", "Bypass", "Aislado", "FS", 
+        "Socorro", "Emergencia", "Liberación", "Verde", "Rojo", 
+        "AUTO", "VENT.", "VP", "Pulsador / Botón", "Pulsador Amarillo",
+        "Luz de Alarma Rojo", "Testigo Luminoso", "Luz Indicadora de Puertas", "Indicador de Estado",
+        "Golpe de Puño", "Pulsador", "Conmutador", "Fijas", "Apagadas", "Intermitentes",
+        "Adelante", "Neutro", "Atrás", "Automático", "Izquierda", "Derecha",
+        "PA", "CMC", "CM", "Subir", "0", "Bajar", "I", "II", "O", "Pulsado",
+        "Apertura", "Anulación", "Tracción / Frenado Socorro"
+    ];
+
+    // DEFINICIÓN DE PREFIJOS
+    const allPrefixes = [
+        { code: "A", desc: "Alimentación / Apertura / Autorización", target: "BOTH" },
+        { code: "AA", desc: "Alimentación Alumbrado / Autorización Apertura", target: "BOTH" },
+        { code: "ALUMBRADO", desc: "Alumbrado", target: "PUPITRE" },
+        { code: "APLICAR", desc: "Aplicar", target: "PUPITRE" },
+        { code: "CONMUTADOR", desc: "Conmutador", target: "PUPITRE" },
+        { code: "CONMUTADOR/PULSADOR", desc: "Conmutador / Pulsador", target: "PUPITRE" },
+        { code: "CONTROL", desc: "Control", target: "BT3" },
+        { code: "DESAPLICAR", desc: "Desaplicar", target: "PUPITRE" },
+        { code: "EN", desc: "Preparar", target: "PUPITRE" },
+        { code: "FD", desc: "Cierre Der.", target: "PUPITRE" },
+        { code: "FG", desc: "Cierre Izq.", target: "PUPITRE" },
+        { code: "HS", desc: "Despreparar", target: "PUPITRE" },
+        { code: "IH", desc: "Inhibición", target: "BT3" },
+        { code: "IS", desc: "Aislamiento", target: "BT3" },
+        { code: "K", desc: "Conmutador", target: "BOTH" },
+        { code: "KFR", desc: "Luces Identif.", target: "PUPITRE" },
+        { code: "KLOAN", desc: "Orden Apertura", target: "PUPITRE" },
+        { code: "KLVR", desc: "Inversor", target: "PUPITRE" },
+        { code: "LMF'S", desc: "Lámparas Puerta", target: "PUPITRE" },
+        { code: "LUNETA", desc: "Desempañador", target: "PUPITRE" },
+        { code: "LUZ", desc: "Luz Faro", target: "PUPITRE" },
+        { code: "MAV", desc: "Reconocimiento", target: "PUPITRE" },
+        { code: "MP", desc: "Manipulador", target: "PUPITRE" },
+        { code: "PREPARACIÓN", desc: "Preparación", target: "BT3" },
+        { code: "PTT", desc: "Radio PTT", target: "PUPITRE" },
+        { code: "RESET", desc: "Reiniciar", target: "BT3" },
+        { code: "SC", desc: "Modo Conducción", target: "PUPITRE" },
+        { code: "SE", desc: "Emergencia", target: "BOTH" },
+        { code: "SETA", desc: "Seta Emerg.", target: "PUPITRE" },
+        { code: "SO", desc: "Socorro", target: "BT3" },
+        { code: "ST", desc: "Selector Puertas", target: "PUPITRE" },
+        { code: "TETRA", desc: "Radio", target: "BT3" },
+        { code: "TIMBRE", desc: "Timbre Cabina", target: "PUPITRE" },
+        { code: "VT", desc: "Lámpara", target: "PUPITRE" }
+    ];
+
+    // DEFINICIÓN DE SUFIJOS (INCLUYE BLOQUE "CABINA")
+    const allSuffixes = [
+        { code: "BT", desc: "Baja Tensión", target: "BT3" },
+        { code: "BU.PU", desc: "Bucle Puertas", target: "BT3" },
+        { code: "CABINA", desc: "Cabina", target: "PUPITRE" },
+        { code: "CALEFACCIÓN", desc: "Calefacción", target: "PUPITRE" },
+        { code: "DE", desc: "De", target: "PUPITRE" },
+        { code: "DI", desc: "Directa", target: "BT3" },
+        { code: "EM", desc: "Emergencia", target: "PUPITRE" },
+        { code: "EMERGENCIA", desc: "Emergencia", target: "BOTH" },
+        { code: "EVACUACIÓN", desc: "Evacuación", target: "PUPITRE" },
+        { code: "FI", desc: "Freno Inmov.", target: "PUPITRE" },
+        { code: "FR", desc: "Frenado", target: "BT3" },
+        { code: "FR.SR", desc: "Bloqueo FU", target: "PUPITRE" },
+        { code: "FRONTAL", desc: "Frontal", target: "PUPITRE" },
+        { code: "FU", desc: "Freno Urgencia", target: "BT3" },
+        { code: "HM", desc: "Hombre Muerto", target: "BT3" },
+        { code: "IZ", desc: "Izquierda", target: "PUPITRE" },
+        { code: "KFU", desc: "Corte Alimentación", target: "PUPITRE" },
+        { code: "KSA", desc: "Tirador Emerg.", target: "BT3" },
+        { code: "LEX", desc: "Línea Expreso", target: "BT3" },
+        { code: "LP", desc: "Lib. Puertas", target: "BT3" },
+        { code: "N.CC", desc: "Cabina Activa", target: "PUPITRE" },
+        { code: "ND", desc: "No Desbloqueo", target: "BT3" },
+        { code: "PARASOL", desc: "Parasol", target: "PUPITRE" },
+        { code: "PS.RED", desc: "Presión Reducida", target: "PUPITRE" },
+        { code: "RETROVISORES", desc: "Retrovisores", target: "PUPITRE" },
+        { code: "SACEM", desc: "Pilotaje Aut.", target: "BT3" },
+        { code: "SELECTOR", desc: "Selector", target: "PUPITRE" },
+        { code: "TCMS", desc: "Red Control", target: "BT3" },
+        { code: "TR", desc: "Tracción", target: "BOTH" },
+        { code: "TR.DI", desc: "Tracción Directa", target: "BT3" },
+        { code: "TÉRMICA", desc: "Térmica", target: "PUPITRE" },
+        { code: "VAC", desc: "Aire Acond.", target: "BT3" },
+        { code: "VENTILACIÓN", desc: "Ventilación", target: "PUPITRE" },
+        { code: "VIA.P", desc: "Vía Pruebas", target: "BT3" },
+        { code: "VT6", desc: "Velocidad 6k", target: "BT3" }
+    ];
+
+    let currentModule = "BT3";
+    let activeChallenges = [];
+    let currentLevel = 0;
+    let score = 0;
+    let selectedBlocks = [];
+    let selectedLocation = null;
+    let selectedPositions = [];
+    let isCurrentAnswerCorrect = false;
+
+    function selectMode(mode) {
+        currentModule = mode;
+        if (mode === "BT3") activeChallenges = [...bt3Challenges];
+        else if (mode === "PUPITRE") activeChallenges = [...pupitreChallenges];
+        else activeChallenges = [...bt3Challenges, ...pupitreChallenges].sort(() => 0.5 - Math.random());
+
+        document.getElementById('menu-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'block';
+
+        currentLevel = 0;
+        score = 0;
+        document.getElementById('score').innerText = `Puntos: ${score}`;
+        
+        initGame();
+    }
+
+    function goMenu() {
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('menu-screen').style.display = 'block';
+    }
+
+    function initGame() {
+        renderPalette();
+        loadLevel();
+    }
+
+    function renderPalette() {
+        const prefContainer = document.getElementById('prefix-container');
+        const suffContainer = document.getElementById('suffix-container');
+
+        prefContainer.innerHTML = '';
+        suffContainer.innerHTML = '';
+
+        // FILTRADO DINÁMICO DE BLOQUES
+        const filteredPrefixes = allPrefixes.filter(p => currentModule === "MIX" || p.target === "BOTH" || p.target === currentModule);
+        const filteredSuffixes = allSuffixes.filter(s => currentModule === "MIX" || s.target === "BOTH" || s.target === currentModule);
+
+        // ORDENAR ALFABÉTICAMENTE
+        filteredPrefixes.sort((a, b) => a.code.localeCompare(b.code));
+        filteredSuffixes.sort((a, b) => a.code.localeCompare(b.code));
+
+        filteredPrefixes.forEach(p => prefContainer.appendChild(createBlock(p.code, p.desc, 'prefix')));
+        filteredSuffixes.forEach(s => suffContainer.appendChild(createBlock(s.code, s.desc, 'suffix')));
+    }
+
+    function createBlock(code, desc, type) {
+        const block = document.createElement('div');
+        block.className = `block ${type}`;
+        block.innerHTML = `<span class="block-title">${code}</span><span class="block-desc">${desc}</span>`;
+        block.addEventListener('click', () => addBlockToSlot({ code, desc }));
+        return block;
+    }
+
+    function loadLevel() {
+        if (currentLevel >= activeChallenges.length) {
+            showModal('🏆', '¡Entrenamiento Completado!', `¡Excelente! Dominas totalmente la materia de este módulo.<br><br><b>Puntaje Final: ${score} Puntos</b>`, 'success', 'Volver al Menú', true);
+            return;
+        }
+
+        const challenge = activeChallenges[currentLevel];
+        document.getElementById('level-indicator').innerText = `Nivel: ${currentLevel + 1} / ${activeChallenges.length}`;
+        document.getElementById('mission-text').innerText = challenge.description;
+
+        // Renderizar opciones de Ubicación
+        const locContainer = document.getElementById('location-options');
+        locContainer.innerHTML = '';
+
+        let locChoices = [];
+        if (challenge.origin === 'BT3') {
+            locChoices = ['EXTERIOR', 'INTERIOR'];
+            document.getElementById('step2-title').innerText = "Paso 2: Ubicación en Armario BT3";
+        } else {
+            locChoices = ['LÁMPARA', 'BOTÓN', 'CONMUTADOR', 'MANIPULADOR'];
+            document.getElementById('step2-title').innerText = "Paso 2: Tipo de Elemento en Pupitre";
+        }
+
+        locChoices.forEach(loc => {
+            const btn = document.createElement('button');
+            btn.className = 'opt-btn location-btn';
+            btn.innerText = loc;
+            btn.onclick = () => selectLocation(loc);
+            locContainer.appendChild(btn);
+        });
+
+        // Renderizar Posiciones dinámicas
+        const posContainer = document.getElementById('position-options');
+        posContainer.innerHTML = '';
+
+        let choices = [...challenge.positions];
+        let distractors = allPossiblePositions.filter(p => !challenge.positions.includes(p));
+        distractors = distractors.sort(() => 0.5 - Math.random()).slice(0, 3);
+        
+        let allOptions = [...choices, ...distractors].sort();
+
+        allOptions.forEach(pos => {
+            const btn = document.createElement('button');
+            btn.className = 'pos-checkbox-btn';
+            btn.innerText = pos;
+            btn.onclick = () => togglePosition(pos, btn);
+            posContainer.appendChild(btn);
+        });
+
+        clearSlots();
+    }
+
+    function selectLocation(loc) {
+        selectedLocation = loc;
+        document.querySelectorAll('.location-btn').forEach(b => {
+            b.classList.toggle('selected', b.innerText === loc);
+        });
+    }
+
+    function togglePosition(pos, btnEl) {
+        if (selectedPositions.includes(pos)) {
+            selectedPositions = selectedPositions.filter(p => p !== pos);
+            btnEl.classList.remove('selected');
+        } else {
+            selectedPositions.push(pos);
+            btnEl.classList.add('selected');
+        }
+    }
+
+    function addBlockToSlot(blockObj) {
+        selectedBlocks.push(blockObj);
+        updateDropAreaUI();
+    }
+
+    function updateDropAreaUI() {
+        const dropArea = document.getElementById('drop-area');
+        if (selectedBlocks.length === 0) {
+            dropArea.innerHTML = `<span style="color: #94a3b8; font-style: italic;">Haz clic en las siglas en orden...</span>`;
+            return;
+        }
+
+        dropArea.innerHTML = '';
+        selectedBlocks.forEach((item, index) => {
+            const blockEl = document.createElement('div');
+            blockEl.className = 'block';
+            blockEl.style.background = '#2563eb';
+            blockEl.innerHTML = `<span class="block-title">${item.code}</span><span class="block-desc">${item.desc}</span>`;
+            blockEl.onclick = () => removeBlock(index);
+
+            dropArea.appendChild(blockEl);
+
+            if (index < selectedBlocks.length - 1) {
+                const dot = document.createElement('span');
+                dot.className = 'dot';
+                dot.innerText = '.';
+                dropArea.appendChild(dot);
+            }
+        });
+    }
+
+    function removeBlock(index) {
+        selectedBlocks.splice(index, 1);
+        updateDropAreaUI();
+    }
+
+    function clearSlots() {
+        selectedBlocks = [];
+        selectedLocation = null;
+        selectedPositions = [];
+        document.querySelectorAll('.location-btn').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll('.pos-checkbox-btn').forEach(b => b.classList.remove('selected'));
+        updateDropAreaUI();
+    }
+
+    function checkAnswer() {
+        if (selectedBlocks.length === 0) { alert("Paso 1 incompleto: Arma las siglas."); return; }
+        if (!selectedLocation) { alert("Paso 2 incompleto: Selecciona la ubicación o tipo."); return; }
+        if (selectedPositions.length === 0) { alert("Paso 3 incompleto: Selecciona las posiciones."); return; }
+
+        const challenge = activeChallenges[currentLevel];
+        const currentCodeArray = selectedBlocks.map(b => b.code);
+
+        const isCodeOk = JSON.stringify(currentCodeArray) === JSON.stringify(challenge.correctCode);
+        const isLocOk = selectedLocation === challenge.location;
+        
+        const sortedSelectedPos = [...selectedPositions].sort();
+        const sortedCorrectPos = [...challenge.positions].sort();
+        const isPosOk = JSON.stringify(sortedSelectedPos) === JSON.stringify(sortedCorrectPos);
+
+        if (isCodeOk && isLocOk && isPosOk) {
+            score += 100;
+            document.getElementById('score').innerText = `Puntos: ${score}`;
+            isCurrentAnswerCorrect = true;
+            showModal('🎉', '¡Respuesta Correcta!', challenge.explanation, 'success', 'Siguiente Nivel', false);
+        } else {
+            isCurrentAnswerCorrect = false;
+            let errors = [];
+            if (!isCodeOk) errors.push(`Siglas incorrectas (Correcta: ${challenge.correctCode.join('.')})`);
+            if (!isLocOk) errors.push(`Ubicación/Tipo incorrecto (Correcto: ${challenge.location})`);
+            if (!isPosOk) errors.push(`Las posiciones correctas son: [${challenge.positions.join(', ')}]`);
+
+            showModal('❌', 'Detalles a Corregir', `Revisa los siguientes puntos:<br>• ${errors.join('<br>• ')}`, 'error', 'Reintentar', false);
+        }
+    }
+
+    let isGameFinished = false;
+
+    function showModal(icon, title, message, type, btnText, isFinish) {
+        document.getElementById('modal-icon').innerText = icon;
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-message').innerHTML = message;
+
+        const btn = document.getElementById('modal-btn');
+        btn.innerText = btnText;
+        btn.className = `btn-modal ${type}`;
+
+        document.getElementById('modal-box').className = `modal ${type}`;
+        document.getElementById('modal-overlay').classList.add('active');
+
+        isGameFinished = isFinish;
+    }
+
+    function handleModalAction() {
+        document.getElementById('modal-overlay').classList.remove('active');
+        if (isGameFinished) { goMenu(); return; }
+
+        if (isCurrentAnswerCorrect) {
+            currentLevel++;
+            loadLevel();
+        } else {
+            clearSlots();
+        }
+    }
+</script>
+</body>
+</html>

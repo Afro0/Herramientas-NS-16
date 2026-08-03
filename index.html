@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capacitación Metro NS-16</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #0f131f;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #ffffff;
+        }
+
+        .menu-container {
+            background-color: #171d2d;
+            border: 2px solid #f1c40f;
+            border-radius: 12px;
+            padding: 40px;
+            width: 90%;
+            max-width: 520px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        }
+
+        .menu-title {
+            color: #f1c40f;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+
+        .menu-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .btn-menu {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: transform 0.1s, background-color 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .btn-menu:active {
+            transform: scale(0.98);
+        }
+
+        .btn-blue {
+            background-color: #2a65e6;
+            color: #ffffff;
+        }
+        .btn-blue:hover { background-color: #1e52c8; }
+
+        .btn-yellow {
+            background-color: #f39c12;
+            color: #000000;
+        }
+        .btn-yellow:hover { background-color: #d68910; }
+
+        .btn-green {
+            background-color: #2ecc71;
+            color: #000000;
+        }
+        .btn-green:hover { background-color: #27ae60; }
+    </style>
+</head>
+<body>
+
+    <div class="menu-container">
+        <h1 class="menu-title">Entrenamiento Metro NS-16</h1>
+        
+        <div class="menu-options">
+            <!-- Juegos previos -->
+            <a href="bt3.html" class="btn-menu btn-blue">1. Conmutadores BT3/Pupitre</a>
+            <a href="linea2.html" class="btn-menu btn-yellow">2. Ruta Linea 2</a>
+            
+            <!-- Entrada al nuevo Simulador por Niveles -->
+            <a href="menu_simulador.html" class="btn-menu btn-green">3. Simulador de Cabina (Procedimientos)</a>
+        </div>
+    </div>
+
+</body>
+</html>
