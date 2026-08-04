@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Cabina Metro NS-16 - Formación de Conductores</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #0d0e12;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; justify-content: center; align-items: flex-start;
+            min-height: 100vh; color: #ffffff; overflow-x: hidden; padding: 10px;
+        }
+        .cabina-wrapper {
+            position: relative; width: 100vw; max-width: 1400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.9); border-radius: 8px; overflow: hidden;
+            background: #000; margin: 0 auto;
+        }
+        .vista-container { display: none; position: relative; width: 100%; height: auto; }
+        .vista-container.activa { display: block; }
+        .cabina-img { width: 100%; height: auto; display: block; object-fit: contain; }
+        area { cursor: pointer; }
+
+        .top-bar { position: absolute; top: 15px; right: 20px; display: flex; gap: 10px; z-index: 20; }
+        .nav-bar { position: absolute; top: 15px; left: 420px; display: flex; gap: 8px; z-index: 20; }
+        .ext-bar {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 8px; z-index: 20; background: rgba(0,0,0,0.85);
+            padding: 8px 12px; border-radius: 8px; border: 1px solid #ffcc00;
+        }
+
+        .btn-ui {
+            padding: 8px 14px; font-size: 12px; font-weight: bold; border: none;
+            border-radius: 5px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: transform 0.1s; text-decoration: none; display: inline-block;
+        }
+        .btn-ui:active { transform: scale(0.95); }
+        .btn-nav { background-color: #34495e; color: white; border: 1px solid #5d6d7e; }
+        .btn-nav.activo { background-color: #f39c12; color: black; border-color: #f1c40f; }
+        .btn-menu { background-color: #8e44ad; color: white; }
+        .btn-reset { background-color: #e74c3c; color: white; }
+        .btn-finish { background-color: #2ecc71; color: white; }
+        .btn-ext { background-color: #3498db; color: white; }
+        .btn-armario { background-color: #e67e22; color: white; }
+
+        .panel-pantalla {
+            position: absolute; top: 15px; left: 20px; background: rgba(10, 12, 18, 0.94);
+            border: 2px solid #ffcc00; padding: 12px 16px; border-radius: 6px; width: 380px;
+            z-index: 10; box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+        }
+        .panel-pantalla h2 { color: #ffcc00; font-size: 14px; margin-bottom: 4px; text-transform: uppercase; }
+        .panel-pantalla p { font-size: 12px; color: #dddddd; line-height: 1.35; white-space: pre-line; }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.88); z-index: 100; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: #181a20; padding: 22px; border-radius: 8px; border: 2px solid #ffcc00;
+            text-align: center; min-width: 360px; max-width: 580px; color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.9);
+        }
+        .modal-content h4 { margin-bottom: 8px; color: #ffcc00; font-size: 15px; text-transform: uppercase; }
+        .modal-content p { font-size: 13px; margin-bottom: 14px; color: #ddd; line-height: 1.4; text-align: left; }
+        .modal-options { display: flex; flex-direction: column; gap: 8px; text-align: left; }
+        
+        .btn-opt {
+            padding: 11px 13px; background: #252830; color: white; border: 1px solid #444;
+            border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px;
+            transition: all 0.2s ease; display: flex; align-items: center; justify-content: space-between;
+        }
+        .btn-opt:hover { background: #f39c12; color: #000; border-color: #f1c40f; }
+
+        .armario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; text-align: left; }
+        .armario-item {
+            background: #252830; padding: 10px; border-radius: 5px; border: 1px solid #444;
+            display: flex; align-items: center; gap: 10px; font-size: 12px; cursor: pointer;
+        }
+        .armario-item input { cursor: pointer; transform: scale(1.2); }
+
+        .game-over-modal {
+            border-color: #e74c3c !important; background: #2a0808 !important;
+        }
+        .game-over-title { color: #e74c3c !important; font-size: 18px !important; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/image-map-resizer/1.0.10/js/imageMapResizer.min.js"></script>
+</head>
+<body>
+
+    <!-- Elemento de audio para los botones FD/FG -->
+    <audio id="audio-monocoup" src="freesound_community-bell-98033.mp3" preload="auto"></audio>
+
+    <div class="cabina-wrapper">
+        <div class="panel-pantalla">
+            <h2 id="info-titulo">Cargando Nivel...</h2>
+            <p id="info-desc">Inicializando estado de tren...</p>
+        </div>
+
+        <div class="nav-bar">
+            <button id="btn-vista-pupitre" class="btn-ui btn-nav activo" onclick="cambiarVista('pupitre')">Pupitre Principal</button>
+            <button id="btn-vista-bt3" class="btn-ui btn-nav" onclick="cambiarVista('bt3')">Armario BT3</button>
+            <button class="btn-ui btn-armario" onclick="abrirArmarioEquipamiento()">🎒 ¿Qué llevar?</button>
+        </div>
+
+        <div class="top-bar">
+            <a href="menu_simulador.html" class="btn-ui btn-menu">Cambiar Nivel</a>
+            <button class="btn-ui btn-reset" onclick="resetearSimulador()">Resetear</button>
+            <button class="btn-ui btn-finish" onclick="evaluarProcedimiento()">Terminar</button>
+        </div>
+
+        <div class="ext-bar" id="ext-bar">
+            <button id="btn-ext-entorno" class="btn-ui btn-ext" onclick="accionExterior('VERIFICAR_ENTORNO')">Mirar Entorno / Vías (Atrás)</button>
+            <button id="btn-ext-anden" class="btn-ui btn-ext" style="background-color:#9b59b6;" onclick="accionExterior('VERIFICAR_ANDEN_CABINA')">Verificar Andén desde Puerta Cabina</button>
+            <button id="btn-ext-salon" class="btn-ui btn-ext" style="background-color:#e67e22;" onclick="interactuarPuertaSalon()">Salir de la cabina</button>
+            <button id="btn-ext-ruptor" class="btn-ui btn-ext" style="background-color:#d35400; display:none;" onclick="interactuarRuptor()">Accionar Ruptor</button>
+        </div>
+
+        <!-- VISTA PUPITRE -->
+        <div id="vista-pupitre" class="vista-container activa">
+            <img src="cabina.jpg" usemap="#mapa-pupitre" class="cabina-img" alt="Cabina NS-16">
+            <map name="mapa-pupitre">
+                <area target="" alt="FG" title="Cierre Puertas Izquierdas (FG)" href="javascript:accionBoton('FG')" coords="569,1279,23" shape="circle">
+                <area target="" alt="FD" title="Cierre Puertas Derechas (FD)" href="javascript:accionBoton('FD')" coords="2304,1301,21" shape="circle">
+                <area target="" alt="EN" title="Energización (EN)" href="javascript:accionBoton('EN')" coords="2349,1223,25" shape="circle">
+                <area target="" alt="HS" title="Des-preparación / Abonado (HS)" href="javascript:accionBoton('HS')" coords="2257,1218,26" shape="circle">
+                <area target="" alt="MANIPULADOR" title="Manipulador de Conducción" href="javascript:abrirSelector('MANIPULADOR', ['TRACCIÓN 5 KM/H', 'TRACCIÓN NORMAL', 'NEUTRO', 'FRENO', 'FU'])" coords="1879,1150,2001,1234" shape="rect">
+                <area target="" alt="PACIS" title="PACIS" href="javascript:interactuarPACIS()" coords="2028,903,2294,1094" shape="rect">
+                <area target="" alt="DDU" title="Pantalla DDU / Platina SACEM" href="javascript:interactuarDDU()" coords="1581,840,1839,1049" shape="rect">
+                <area target="" alt="RETROVISORES" title="Conmutador Espejos Retrovisores (K.ES)" href="javascript:abrirSelector('RETROVISORES', ['IZQUIERDA', 'NEUTRO / CERRADO', 'DERECHA'])" coords="1521,1128,28" shape="circle">
+                <area target="" alt="AP FI" title="Aplicación Freno de Inmovilización (AP FI)" href="javascript:accionBoton('AP_FI')" coords="1578,1128,22" shape="circle">
+                <area target="" alt="DAP FI" title="Desaplicación Freno de Inmovilización (DAP FI)" href="javascript:accionBoton('DAP_FI')" coords="1638,1131,21" shape="circle">
+                <area target="" alt="PTT" title="PTT (Megafonía Salón)" href="javascript:interactuarPACIS()" coords="1459,1129,20" shape="circle">
+                <area target="" alt="LMFS" title="Lámparas Azules Enclavamiento Puertas (LMFS)" href="javascript:accionBoton('LMFS')" coords="1327,844,48" shape="circle">
+                <area target="" alt="KLVR" title="Inversor de Marcha (KLVR)" href="javascript:abrirSelector('KLVR', ['ADELANTE', 'NEUTRO', 'ATRÁS'])" coords="1158,981,1208,1088" shape="rect">
+                <area target="" alt="MICROFONO TETRA" title="Micrófono TETRA (PCC)" href="javascript:abrirOpcionesTETRA()" coords="1026,1073,1148,1208" shape="rect">
+                <area target="" alt="SC" title="Selector Modo Conducción (SC)" href="javascript:abrirSelector('SC', ['PA', 'CMC', 'CM', 'FS'])" coords="402,1141,528,1260" shape="rect">
+                <area target="" alt="ST" title="Selector Sentido (ST)" href="javascript:abrirSelector('ST', ['I', 'AUTO', 'D', 'N'])" coords="786,1126,915,1218" shape="rect">
+                <area target="" alt="KLOAN" title="Comando Apertura Puertas (KLOAN)" href="javascript:abrirSelector('KLOAN', ['DESAUTORIZADO', 'AUTORIZADO (APERTURA)'])" coords="1216,1112,1266,1214" shape="rect">
+                <area target="" alt="K.AA.IZ" title="Autorización Puertas Izquierdas (K.AA.IZ)" href="javascript:abrirSelector('K.AA.IZ', ['NEUTRO / BLOQUEADO', 'AUTORIZADO (IZQUIERDA)'])" coords="1101,844,24" shape="circle">
+            </map>
+        </div>
+
+        <!-- VISTA BT3 COMPLETA -->
+        <div id="vista-bt3" class="vista-container">
+            <img src="bt3.jpg" usemap="#mapa-bt3" class="cabina-img" alt="Armario BT3">
+            <map name="mapa-bt3">
+                <area target="" alt="RESET SACEM" title="RESET SACEM" href="javascript:accionResetSacem()" coords="232,451,105" shape="circle">
+                <area target="" alt="K.A.D.I" title="K.A.D.I" href="javascript:abrirSelector('K.A.D.I', ['NORMAL', 'AISLADO'])" coords="509,459,107" shape="circle">
+                <area target="" alt="K.AA.LEX" title="K.AA.LEX" href="javascript:abrirSelector('K.AA.LEX', ['NORMAL', 'AISLADO'])" coords="795,455,95" shape="circle">
+                <area target="" alt="K.SE.TR" title="K.SE.TR" href="javascript:abrirSelector('K.SE.TR', ['NORMAL', 'AISLADO'])" coords="1073,445,108" shape="circle">
+                <area target="" alt="ALIMENTACION TETRA" title="ALIMENTACION TETRA" href="javascript:abrirSelector('ALIMENTACION TETRA', ['ON', 'OFF'])" coords="1368,461,113" shape="circle">
+                <area target="" alt="K.IH.KSA" title="K.IH.KSA" href="javascript:abrirSelector('K.IH.KSA', ['NORMAL', 'AISLADO'])" coords="1652,455,109" shape="circle">
+                <area target="" alt="K.L.P" title="K.L.P" href="javascript:abrirSelector('K.L.P', ['NORMAL', 'AISLADO'])" coords="1953,456,108" shape="circle">
+                <area target="" alt="K.IS.BU.PU" title="K.IS.BU.PU" href="javascript:abrirSelector('K.IS.BU.PU', ['NORMAL', 'AISLADO'])" coords="316,1267,118" shape="circle">
+                <area target="" alt="K.A.BT" title="K.A.BT" href="javascript:abrirSelector('K.A.BT', ['NORMAL', 'AISLADO'])" coords="710,1233,113" shape="circle">
+                <area target="" alt="K.IS.ND.FR" title="K.IS.ND.FR" href="javascript:abrirSelector('K.IS.ND.FR', ['NORMAL', 'AISLADO'])" coords="1080,1247,128" shape="circle">
+                <area target="" alt="CONTROL VAC" title="CONTROL VAC" href="javascript:abrirSelector('CONTROL VAC', ['NORMAL', 'AISLADO'])" coords="1459,1207,96" shape="circle">
+                <area target="" alt="K.FU VIAP" title="K.FU VIAP" href="javascript:abrirSelector('K.FU VIAP', ['NORMAL', 'AISLADO'])" coords="1825,1192,105" shape="circle">
+                <area target="" alt="K.IS.HM" title="K.IS.HM" href="javascript:abrirSelector('K.IS.HM', ['NORMAL', 'AISLADO'])" coords="384,1626,111" shape="circle">
+                <area target="" alt="K.A.TR.DI" title="K.A.TR.DI" href="javascript:abrirSelector('K.A.TR.DI', ['NORMAL', 'AISLADO'])" coords="749,1627,116" shape="circle">
+                <area target="" alt="K.SO.TCMS" title="K.SO.TCMS" href="javascript:abrirSelector('K.SO.TCMS', ['NORMAL', 'AISLADO'])" coords="1102,1609,115" shape="circle">
+                <area target="" alt="K.IH.VT6" title="K.IH.VT6" href="javascript:abrirSelector('K.IH.VT6', ['NORMAL', 'AISLADO'])" coords="1462,1604,119" shape="circle">
+                <area target="" alt="BOTON PREPARACION DE EMERGENCIA" title="BOTON PREPARACION DE EMERGENCIA" href="javascript:accionBoton('PREPARACION_EMERGENCIA')" coords="1800,1567,104" shape="circle">
+            </map>
+        </div>
+    </div>
+
+    <!-- Modal General -->
+    <div id="modalSelector" class="modal">
+        <div class="modal-content" id="modal-box">
+            <h4 id="modal-titulo">Seleccionar Posición</h4>
+            <div id="modal-options" class="modal-options"></div>
+        </div>
+    </div>
+
+    <!-- Modal ¿Qué llevar? -->
+    <div id="modalArmario" class="modal">
+        <div class="modal-content">
+            <h4>🎒 ¿Qué llevar? (Equipamiento / EPP)</h4>
+            <p>Seleccione los elementos que equipará para la intervención:</p>
+            <div class="armario-grid">
+                <label class="armario-item"><input type="checkbox" id="eq-chaleco"> 🦺 Chaleco reflectante</label>
+                <label class="armario-item"><input type="checkbox" id="eq-radio"> 📻 Radio portátil</label>
+                <label class="armario-item"><input type="checkbox" id="eq-llave"> 🔑 Llave triangular</label>
+                <label class="armario-item"><input type="checkbox" id="eq-paleta"> 🪵 Paleta de replegado</label>
+                <label class="armario-item"><input type="checkbox" id="eq-linterna"> 🔦 Linterna</label>
+                <label class="armario-item"><input type="checkbox" id="eq-extintor"> 🧯 Extintor</label>
+                <label class="armario-item"><input type="checkbox" id="eq-escalera"> 🪜 Escalera</label>
+            </div>
+            <button class="btn-ui btn-finish" style="width:100%;" onclick="guardarEquipamiento()">Confirmar Equipamiento</button>
+        </div>
+    </div>
+
+    <script>
+        const estacionesL2 = ["Hospital El Pino", "La Cisterna", "Lo Ovalle", "Franklin", "Los Héroes", "Santa Ana", "Cal y Canto", "Vespucio Norte"];
+        let estacionActual = "La Cisterna";
+        let trenNumero = 108;
+        let nivelActual = 10;
+        let simulacionFinalizadaCritical = false;
+
+        let equipamiento = {
+            chaleco: false, radio: false, llave: false, paleta: false,
+            linterna: false, extintor: false, escalera: false
+        };
+
+        let estadoActual = {
+            SC: 'PA', ST: 'AUTO', KLVR: 'ADELANTE', MANIPULADOR: 'NEUTRO',
+            KLOAN: 'DESAUTORIZADO', K_AA_IZ: 'NEUTRO / BLOQUEADO', RETROVISORES: 'NEUTRO / CERRADO', K_IH_KSA: 'NORMAL',
+            
+            // Nivel 7
+            n7_pacisAnuncioReseteo: false, n7_puertasConfirmadasFD: false, n7_despreparadoHS: false,
+            n7_tiempoHS_EN: 0, n7_preparadoEN: false, n7_trenDeslocalizado: false, n7_fiDesaplicado: false,
+            n7_pccAutorizoConduccion: false,
+
+            // Nivel 8
+            n8_scEnCMC: false, n8_resetSacemPresionado5s: false, n8_platinaIniciadaParpadeante: false, n8_pccInformado: false,
+
+            // Nivel 10
+            n10_posicionFS: false,
+            n10_stNeutro: false,
+            n10_klvrNeutro: false,
+            n10_tiempoEspera5sCompletado: false,
+            n10_retomoSC_CMC: false,
+            n10_retomoST_AUTO: false,
+            n10_retomoKLVR_Neutro: false,
+            n10_confirmadoFD: false,
+            n10_fupaTriggered: false,
+            n10_platinaNormalizada: false,
+            n10_pccInformado: false,
+
+            // Nivel 11
+            n11_fuAplicado: false,
+            n11_pacisNoAcercarse: false,
+            n11_puertasInterestacionBloqueadas: false,
+            n11_mandosAperturaCorrectos: false,
+            n11_kloanAutorizado: false,
+            n11_notificacionPersonalEstacionRecibida: false,
+            n11_puertasNormalizadasDDU: false,
+            n11_manipuladorSacadoFU: false,
+            n11_enclavamientoComandado: false,
+            n11_lmfObtenido: false,
+            n11_pccInformadoReanudacion: false
+        };
+
+        let timerN10 = null;
+        let historialAcciones = [];
+        let elementoActualModal = '';
+        let timestampHS = 0;
+
+        function reproducirSonidoMonocoup() {
+            const audio = document.getElementById('audio-monocoup');
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(e => console.log("Audio no cargado."));
+            }
+        }
+
+        function inicializarSimulador() {
+            const urlParams = new URLSearchParams(window.location.search);
+            nivelActual = parseInt(urlParams.get('nivel')) || 10;
+            estacionActual = estacionesL2[Math.floor(Math.random() * estacionesL2.length)];
+            trenNumero = 100 + Math.floor(Math.random() * 20);
+
+            simulacionFinalizadaCritical = false;
+            historialAcciones = [];
+
+            switch (nivelActual) {
+                case 2:
+                    actualizarPanel("2. Bloqueo Manual de Puertas", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Falla de enclavamiento de puertas en coche de salón.\nAcción: Diríjase al salón, condene y bloquee la puerta averiada, e instale cinta "Fuera de Servicio".`);
+                    break;
+                case 3:
+                    actualizarPanel("3. Liberación Manual de Puertas", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Instrucción de evacuación dictada por P.C.C.\nAcción: Acceda al salón y utilice la llave triangular para la liberación manual de puertas.`);
+                    break;
+                case 4:
+                    actualizarPanel("4. Aislamiento Freno Neumático (XFR)", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Falla grave de frenado detectada en Coche Motriz.\nAcción: Aplique corte de corriente con Ruptor en andén e intervenga llaves XFR/XFI según protocolo.`);
+                    break;
+                case 5:
+                    actualizarPanel("5. Aislamiento Freno Inmovilización (XFI)", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Anomalía o bloqueo de Freno de Inmovilización.\nAcción: Realice el aislamiento puntual de llaves XFI bajo norma de seguridad.`);
+                    break;
+                case 6:
+                    actualizarPanel("6. Repliegue Frotadores Positivos (FP/XFP)", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Anomalía en la captación de energía del tren.\nAcción: Monte equipamiento de seguridad, use la Paleta de madera y accione la llave XFP negra en boguies.`);
+                    break;
+                case 7:
+                    actualizarPanel("7. Reseteo de Tren en Estación", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Sistemas bloqueados por fallo de secuencia.\nAcción: Ejecute reseteo del tren en estación conforme a norma (Confirmación FD -> HS -> Espera 10s -> EN -> DAP FI -> P.C.C.).`);
+                    break;
+                case 8:
+                    actualizarPanel("8. Reseteo Ordenador SACEM", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Platina del SACEM completamente APAGADA en cabina.\nP.C.C. INSTRUYE: "Efectúe reseteo de ordenador SACEM desde el armario BT3".`);
+                    break;
+                case 9:
+                    actualizarPanel("9. Disparo KSA en Salida", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Activación de lazo KSA al iniciar la marcha en salida de estación.\nAcción: Aislar K.IH.KSA en BT3, realizar maniobra de retroceso en CM y rearmar dispositivo en salón.`);
+                    break;
+                case 10:
+                    actualizarPanel("10. Reseteo Platina SACEM", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Platina del SACEM congelada encendida en FIJO.\nAcción: Ejecute la secuencia de reseteo de platina (SC: FS, ST: N, KLVR: Neutro -> Espera 5s -> Re-toma -> FD/FG).`);
+                    break;
+                case 11:
+                    actualizarPanel("11. Atrapamiento en Salida de Estación", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Al iniciar la marcha adviertes por espejo que el tren va arrastrando a una persona en la última puerta.\nCONFIGURACIÓN: 2 coches en interestación y 5 en andén.`);
+                    break;
+                default:
+                    actualizarPanel(`Nivel ${nivelActual}`, `Estación ${estacionActual} - Tren ${trenNumero}\nProcedimiento cargado.`);
+                    break;
+            }
+        }
+
+        function cambiarVista(vista) {
+            if (simulacionFinalizadaCritical) return;
+            document.querySelectorAll('.vista-container').forEach(el => el.classList.remove('activa'));
+            document.querySelectorAll('.btn-nav').forEach(el => el.classList.remove('activo'));
+
+            if (vista === 'pupitre') {
+                document.getElementById('vista-pupitre').classList.add('activa');
+                document.getElementById('btn-vista-pupitre').classList.add('activo');
+            } else {
+                document.getElementById('vista-bt3').classList.add('activa');
+                document.getElementById('btn-vista-bt3').classList.add('activo');
+            }
+            setTimeout(() => { imageMapResize(); }, 50);
+        }
+
+        function actualizarPanel(titulo, desc) {
+            document.getElementById('info-titulo').innerText = titulo;
+            document.getElementById('info-desc').innerText = desc;
+        }
+
+        function abrirArmarioEquipamiento() {
+            if (simulacionFinalizadaCritical) return;
+            document.getElementById('modalArmario').style.display = 'flex';
+        }
+
+        function guardarEquipamiento() {
+            equipamiento.chaleco = document.getElementById('eq-chaleco').checked;
+            equipamiento.radio = document.getElementById('eq-radio').checked;
+            equipamiento.llave = document.getElementById('eq-llave').checked;
+            equipamiento.paleta = document.getElementById('eq-paleta').checked;
+            equipamiento.linterna = document.getElementById('eq-linterna').checked;
+            equipamiento.extintor = document.getElementById('eq-extintor').checked;
+            equipamiento.escalera = document.getElementById('eq-escalera').checked;
+
+            document.getElementById('modalArmario').style.display = 'none';
+            actualizarPanel("Equipamiento", "Elementos guardados.");
+        }
+
+        function gatillarGameOverCritico(mensaje) {
+            simulacionFinalizadaCritical = true;
+            let box = document.getElementById('modal-box');
+            document.getElementById('modal-titulo').innerText = "⚡ ACCIDENTE CRÍTICO DE SEGURIDAD";
+            document.getElementById('modal-titulo').className = "game-over-title";
+            
+            box.className = "modal-content game-over-modal";
+            
+            let container = document.getElementById('modal-options');
+            container.innerHTML = `
+                <p style="color:#ff8888; font-weight:bold; font-size:14px;">${mensaje}</p>
+                <button class="btn-ui btn-reset" style="margin-top:15px;" onclick="location.reload()">Reiniciar Simulador</button>
+            `;
+            document.getElementById('modalSelector').style.display = 'flex';
+        }
+
+        function accionResetSacem() {
+            if (simulacionFinalizadaCritical) return;
+            if (nivelActual === 8) {
+                if (estadoActual.SC === 'CMC') estadoActual.n8_scEnCMC = true;
+                estadoActual.n8_resetSacemPresionado5s = true;
+                actualizarPanel("BT3", "Pulsado botón Reset SACEM (5s).");
+                
+                setTimeout(() => {
+                    estadoActual.n8_platinaIniciadaParpadeante = true;
+                    actualizarPanel("Platina SACEM", "20 segundos transcurridos. Indicaciones PA, CMC, CMP parpadeando.");
+                }, 20000);
+            } else {
+                actualizarPanel("BT3", "Botón Reset SACEM pulsado.");
+            }
+        }
+
+        function interactuarPACIS() {
+            if (simulacionFinalizadaCritical) return;
+            elementoActualModal = 'PACIS_OPCIONES';
+            document.getElementById('modal-titulo').innerText = 'Sistema PACIS - Megafonía / Pantalla';
+            let container = document.getElementById('modal-options');
+            
+            if (nivelActual === 7 || (nivelActual === 10 && estadoActual.n10_fupaTriggered)) {
+                container.innerHTML = `<button class="btn-opt" onclick="emitirPACIS('N7_ALUMBRADO_RESET')">📢 "Señores pasajeros, se les informa que el alumbrado normal del tren se apagará por algunos momentos..."</button>`;
+            } else if (nivelActual === 11) {
+                container.innerHTML = `<button class="btn-opt" onclick="emitirPACIS('N11_NO_ACERCARSE')">📢 "Señores pasajeros, por favor no acercarse a las puertas"</button>`;
+            }
+            document.getElementById('modalSelector').style.display = 'flex';
+        }
+
+        function emitirPACIS(tipo) {
+            document.getElementById('modalSelector').style.display = 'none';
+            if (tipo === 'N7_ALUMBRADO_RESET') {
+                estadoActual.n7_pacisAnuncioReseteo = true;
+                actualizarPanel("PACIS", "Alocución emitida a clientes.");
+            } else if (tipo === 'N11_NO_ACERCARSE') {
+                estadoActual.n11_pacisNoAcercarse = true;
+                actualizarPanel("PACIS", "📢 Alocución emitida: 'Señores pasajeros, por favor no acercarse a las puertas'.");
+            }
+        }
+
+        function abrirOpcionesTETRA() {
+            if (simulacionFinalizadaCritical) return;
+            elementoActualModal = 'TETRA_OPCIONES';
+            document.getElementById('modal-titulo').innerText = 'Micrófono TETRA - P.C.C.';
+            let container = document.getElementById('modal-options');
+
+            if (nivelActual === 8) {
+                container.innerHTML = `<button class="btn-opt" onclick="comunicarPCC('N8_INFORMAR_RESET')">📻 Informar estado de platina parpadeante a PCC</button>`;
+            } else if (nivelActual === 10) {
+                container.innerHTML = `<button class="btn-opt" onclick="comunicarPCC('N10_INFORMAR_PLATINA')">📻 Informar a PCC estado de la platina</button>`;
+            } else if (nivelActual === 7) {
+                container.innerHTML = `<button class="btn-opt" onclick="comunicarPCC('N7_INFORMAR_DESLOCALIZACION')">📻 Informar deslocalización a PCC</button>`;
+            } else if (nivelActual === 11) {
+                container.innerHTML = `<button class="btn-opt" onclick="comunicarPCC('N11_INFORMAR_PCC_FINAL')">📻 Informar a PCC normalización de tren tras auxilio y solicitar reanudación de marcha</button>`;
+            }
+            document.getElementById('modalSelector').style.display = 'flex';
+        }
+
+        function comunicarPCC(momento) {
+            document.getElementById('modalSelector').style.display = 'none';
+            if (momento === 'N8_INFORMAR_RESET') {
+                estadoActual.n8_pccInformado = true;
+                actualizarPanel("P.C.C.", `📻 P.C.C.: "Recibido Conductor. Autorizado."`);
+            } else if (momento === 'N10_INFORMAR_PLATINA') {
+                estadoActual.n10_pccInformado = true;
+                actualizarPanel("P.C.C.", `📻 P.C.C.: "Recibido Conductor."`);
+            } else if (momento === 'N7_INFORMAR_DESLOCALIZACION') {
+                estadoActual.n7_pccAutorizoConduccion = true;
+                actualizarPanel("P.C.C.", `📻 P.C.C.: "Recibido Conductor."`);
+            } else if (momento === 'N11_INFORMAR_PCC_FINAL') {
+                estadoActual.n11_pccInformadoReanudacion = true;
+                actualizarPanel("P.C.C.", `📻 P.C.C.: "Enterado Conductor Tren ${trenNumero}. Se reanuda corriente de tracción. Autorizado a continuar marcha."`);
+            }
+        }
+
+        function interactuarDDU() {
+            if (simulacionFinalizadaCritical) return;
+            let container = document.getElementById('modal-options');
+
+            if (nivelActual === 11) {
+                elementoActualModal = 'DDU_N11';
+                document.getElementById('modal-titulo').innerText = 'Pantalla DDU - Gestión de Puertas por Coche';
+                
+                container.innerHTML = `
+                    <button class="btn-opt" onclick="gestionarPuertasDDU('BLOQUEAR_INTERESTACION')">🔒 Bloquear Puertas de Coches 1 y 2 (Interestación)</button>
+                    <button class="btn-opt" onclick="gestionarPuertasDDU('NORMALIZAR_TODAS')">🔓 Normalizar Bloqueo de Puertas (Todos los coches)</button>
+                `;
+                document.getElementById('modalSelector').style.display = 'flex';
+                return;
+            }
+
+            let textoDDU = "";
+            if (nivelActual === 8) {
+                textoDDU = estadoActual.n8_platinaIniciadaParpadeante ? "[Platina SACEM]\nIndicaciones PA, CMC, CMP PARPADEANTES." : "[Platina SACEM]\n🔴 PANTALLA APAGADA.";
+            } else if (nivelActual === 10) {
+                textoDDU = estadoActual.n10_fupaTriggered ? "[Platina SACEM]\n🚨 FU PA ACTIVADO." : (estadoActual.n10_platinaNormalizada ? "[Platina SACEM]\n🟢 Platina normalizada (PA)." : "[Platina SACEM]\n⚠️ PANTALLA FIJA (Congelada).");
+            } else if (nivelActual === 7) {
+                textoDDU = estadoActual.n7_preparadoEN ? (estadoActual.n7_fiDesaplicado ? "[DDU] TREN DESLOCALIZADO - FI DESAPLICADO" : "[DDU] TREN DESLOCALIZADO - FI APLICADO") : "[DDU] Normal";
+            }
+            actualizarPanel("Pantalla DDU / Platina SACEM", textoDDU);
+        }
+
+        function gestionarPuertasDDU(accion) {
+            document.getElementById('modalSelector').style.display = 'none';
+            if (accion === 'BLOQUEAR_INTERESTACION') {
+                estadoActual.n11_puertasInterestacionBloqueadas = true;
+                actualizarPanel("Pantalla DDU", "🔒 Puertas de Coche 1 y Coche 2 (Interestación) BLOQUEADAS en DDU.");
+            } else if (accion === 'NORMALIZAR_TODAS') {
+                estadoActual.n11_puertasNormalizadasDDU = true;
+                actualizarPanel("Pantalla DDU", "🔓 Puertas de todos los coches NORMALIZADAS en DDU.");
+            }
+        }
+
+        function abrirSelector(elemento, opciones) {
+            if (simulacionFinalizadaCritical) return;
+            elementoActualModal = elemento;
+            document.getElementById('modal-titulo').innerText = `${elemento}`;
+            let container = document.getElementById('modal-options');
+            container.innerHTML = '';
+            opciones.forEach(opc => {
+                let btn = document.createElement('button');
+                btn.className = 'btn-opt';
+                btn.innerText = opc;
+                btn.onclick = () => seleccionarOpcion(opc);
+                container.appendChild(btn);
+            });
+            document.getElementById('modalSelector').style.display = 'flex';
+        }
+
+        function seleccionarOpcion(opcion) {
+            document.getElementById('modalSelector').style.display = 'none';
+            estadoActual[elementoActualModal] = opcion;
+            
+            if (elementoActualModal === 'MANIPULADOR') {
+                if (opcion === 'FU') {
+                    if (nivelActual === 11) estadoActual.n11_fuAplicado = true;
+                    actualizarPanel("Manipulador", "🚨 FRENO DE EMERGENCIA (FU) APLICADO.");
+                } else if (opcion === 'NEUTRO') {
+                    if (nivelActual === 11 && estadoActual.n11_fuAplicado) estadoActual.n11_manipuladorSacadoFU = true;
+                    actualizarPanel("Manipulador", "Manipulador dispuesto en NEUTRO.");
+                }
+            }
+
+            if (elementoActualModal === 'SC' && opcion === 'CMC' && nivelActual === 8) {
+                estadoActual.n8_scEnCMC = true;
+            }
+
+            if (elementoActualModal === 'KLOAN' && opcion === 'AUTORIZADO (APERTURA)' && nivelActual === 11) {
+                evaluarAperturaNivel11();
+            }
+
+            if (nivelActual === 10) {
+                evaluarMecanicaNivel10();
+            }
+
+            actualizarPanel(`Mando ${elementoActualModal}`, `Seleccionado: ${opcion}`);
+        }
+
+        function evaluarMecanicaNivel10() {
+            // Verificar configuración inicial de reseteo: SC: FS, ST: N, KLVR: NEUTRO
+            if (estadoActual.SC === 'FS' && estadoActual.ST === 'N' && estadoActual.KLVR === 'NEUTRO') {
+                estadoActual.n10_posicionFS = true;
+                estadoActual.n10_stNeutro = true;
+                estadoActual.n10_klvrNeutro = true;
+
+                if (!timerN10) {
+                    actualizarPanel("Reseteo Platina SACEM", "Mandos en FS / N / NEUTRO. Iniciando temporización de 5 segundos...");
+                    timerN10 = setTimeout(() => {
+                        estadoActual.n10_tiempoEspera5sCompletado = true;
+                        actualizarPanel("Reseteo Platina SACEM", "⏱️ 5 segundos transcurridos. Puede re-tomar mandos (SC: CMC, ST: AUTO, KLVR: Neutro) y presionar FD.");
+                    }, 5000);
+                }
+            }
+
+            // Verificar re-toma de mandos: SC: CMC, ST: AUTO, KLVR: NEUTRO
+            if (estadoActual.n10_tiempoEspera5sCompletado && estadoActual.SC === 'CMC' && estadoActual.ST === 'AUTO' && estadoActual.KLVR === 'NEUTRO') {
+                estadoActual.n10_retomoSC_CMC = true;
+                estadoActual.n10_retomoST_AUTO = true;
+                estadoActual.n10_retomoKLVR_Neutro = true;
+            }
+        }
+
+        function evaluarAperturaNivel11() {
+            let stValido = (estadoActual.ST === 'I' || estadoActual.ST === 'D');
+            if (estadoActual.SC === 'CM' && stValido && estadoActual.KLVR === 'NEUTRO') {
+                estadoActual.n11_mandosAperturaCorrectos = true;
+                estadoActual.n11_kloanAutorizado = true;
+                
+                setTimeout(() => {
+                    estadoActual.n11_notificacionPersonalEstacionRecibida = true;
+                    actualizarPanel("Notificación de Andén", "📢 INFORMACIÓN DE ESTACIÓN: Personal de estación se encuentra en andén auxiliando al pasajero accidentado. Aguarde la conclusión del procedimiento para normalizar.");
+                }, 1500);
+
+            } else {
+                actualizarPanel("Comando KLOAN", "⚠️ ADVERTENCIA: Verifique configuración de mandos para apertura en andén (SC: CM, ST: Lado Andén I/D, KLVR: NEUTRO).");
+            }
+        }
+
+        function accionBoton(tipo) {
+            if (simulacionFinalizadaCritical) return;
+
+            if (tipo === 'FG' || tipo === 'FD') {
+                reproducirSonidoMonocoup();
+
+                if (nivelActual === 10) {
+                    if (estadoActual.n10_retomoSC_CMC && estadoActual.n10_retomoST_AUTO) {
+                        estadoActual.n10_confirmadoFD = true;
+                        if (Math.random() < 0.25) {
+                            estadoActual.n10_fupaTriggered = true;
+                            actualizarPanel("Platina SACEM", `Pulsado ${tipo}. 🔔 Monocoup obtenido.\n🚨 Se presenta FU PA al confirmar enclavamiento. Proceda al reseteo completo del tren en estación.`);
+                        } else {
+                            estadoActual.n10_platinaNormalizada = true;
+                            actualizarPanel("Platina SACEM", `Pulsado ${tipo}. 🔔 Monocoup obtenido.\n🟢 Platina normalizada correctamente (PA).`);
+                        }
+                    } else {
+                        actualizarPanel("Comando FD/FG", `Pulsado ${tipo}. Verifique haber completado la re-toma de mandos (SC: CMC, ST: AUTO, KLVR: Neutro).`);
+                    }
+                } else if (nivelActual === 11) {
+                    if (estadoActual.n11_puertasNormalizadasDDU && estadoActual.n11_manipuladorSacadoFU) {
+                        estadoActual.n11_enclavamientoComandado = true;
+                        estadoActual.n11_lmfObtenido = true;
+                        actualizarPanel("Comando Cierre Puertas", `Pulsado ${tipo}.\n🔔 Monocoup obtenido. Lámpara LMF azul encendida. Enclavamiento de puertas verificado.`);
+                    } else {
+                        actualizarPanel("Comando Cierre Puertas", `Pulsado ${tipo}. Verifique normalización de puertas en DDU y sacado de FU.`);
+                    }
+                } else if (nivelActual === 7 || (nivelActual === 10 && estadoActual.n10_fupaTriggered)) {
+                    if (estadoActual.SC === 'CM' && (estadoActual.ST === 'I' || estadoActual.ST === 'D') && estadoActual.KLVR === 'NEUTRO') {
+                        estadoActual.n7_puertasConfirmadasFD = true;
+                        actualizarPanel("Pulsador", `Pulsado ${tipo}. 🔔 Monocoup obtenido.`);
+                    } else {
+                        actualizarPanel("Pulsador", `Pulsado ${tipo}.`);
+                    }
+                } else {
+                    actualizarPanel("Pulsador", `Pulsado ${tipo}.`);
+                }
+            } else if (tipo === 'DAP_FI') {
+                if (nivelActual === 7 || (nivelActual === 10 && estadoActual.n10_fupaTriggered)) {
+                    if (estadoActual.n7_preparadoEN) {
+                        estadoActual.n7_fiDesaplicado = true;
+                        actualizarPanel("DAP FI", "Desaplicación de FI ejecutada.");
+                    }
+                } else {
+                    actualizarPanel("DAP FI", "Pulsado DAP FI.");
+                }
+            } else if (tipo === 'HS') {
+                if (nivelActual === 7 || (nivelActual === 10 && estadoActual.n10_fupaTriggered)) {
+                    if (!estadoActual.n7_puertasConfirmadasFD) {
+                        gatillarGameOverCritico("⚡ ACCIDENTE CRÍTICO DE SEGURIDAD\nRealizó la des-preparación (HS) / reseteo del tren sin haber confirmado el enclavamiento seguro de puertas con FD/FG.");
+                        return;
+                    }
+                    estadoActual.n7_despreparadoHS = true;
+                    timestampHS = Date.now();
+                    actualizarPanel("HS", "Tren des-preparado.");
+                }
+            } else if (tipo === 'EN') {
+                if (nivelActual === 7 || (nivelActual === 10 && estadoActual.n10_fupaTriggered)) {
+                    if (!estadoActual.n7_despreparadoHS) {
+                        actualizarPanel("EN", "Tren no des-preparado.");
+                        return;
+                    }
+                    let tiempoTranscurrido = (Date.now() - timestampHS) / 1000;
+                    estadoActual.n7_tiempoHS_EN = tiempoTranscurrido;
+                    estadoActual.n7_preparadoEN = true;
+                    actualizarPanel("EN", "Tren energizado.");
+                }
+            } else {
+                actualizarPanel("Acción", `Botón ${tipo} activado.`);
+            }
+        }
+
+        function resetearSimulador() {
+            if (timerN10) clearTimeout(timerN10);
+            timerN10 = null;
+            inicializarSimulador();
+        }
+
+        function evaluarProcedimiento() {
+            if (simulacionFinalizadaCritical) return;
+            let errores = [];
+
+            if (nivelActual === 8) {
+                if (estadoActual.SC !== 'CMC') errores.push("• SC: Faltó disponer el conmutador SC en 'CMC'.");
+                if (!estadoActual.n8_resetSacemPresionado5s) errores.push("• BT3: Faltó pulsar el botón rojo 'Reset SACEM' por 5 segundos.");
+                if (!estadoActual.n8_platinaIniciadaParpadeante) errores.push("• TEMPORIZACIÓN: No esperó los 20 segundos requeridos para el encendido parpadeante de la platina.");
+            } else if (nivelActual === 10) {
+                if (!estadoActual.n10_posicionFS) errores.push("• MANDOS: Faltó disponer SC en 'FS'.");
+                if (!estadoActual.n10_stNeutro) errores.push("• MANDOS: Faltó disponer ST en 'N' (Neutro).");
+                if (!estadoActual.n10_klvrNeutro) errores.push("• MANDOS: Faltó disponer KLVR en 'NEUTRO'.");
+                if (!estadoActual.n10_tiempoEspera5sCompletado) errores.push("• TEMPORIZACIÓN: No aguardó los 5 segundos requeridos en la posición de reseteo.");
+                if (!estadoActual.n10_retomoSC_CMC) errores.push("• RE-TOMA MANDOS: Faltó volver a disponer SC en 'CMC'.");
+                if (!estadoActual.n10_retomoST_AUTO) errores.push("• RE-TOMA MANDOS: Faltó volver a disponer ST en 'AUTO'.");
+                if (!estadoActual.n10_confirmadoFD) errores.push("• CONFIRMACIÓN: Faltó presionar el botón FD (o FG) para confirmar el enclavamiento.");
+                
+                // EVALUACIÓN CONDICIONAL: Solo si salta FU PA exige los pasos de reseteo del tren
+                if (estadoActual.n10_fupaTriggered) {
+                    if (!estadoActual.n7_puertasConfirmadasFD) errores.push("• RESETEO TREN (tras FU PA): Faltó re-confirmar enclavamiento con FD/FG.");
+                    if (!estadoActual.n7_despreparadoHS || !estadoActual.n7_preparadoEN) errores.push("• RESETEO TREN (tras FU PA): Faltó realizar la secuencia HS/EN.");
+                    if (!estadoActual.n7_fiDesaplicado) errores.push("• RESETEO TREN (tras FU PA): Faltó desaplicar el FI con DAP FI.");
+                }
+            } else if (nivelActual === 11) {
+                if (!estadoActual.n11_fuAplicado) errores.push("• MANIPULADOR: Faltó aplicar inmediatamente el Freno de Emergencia (FU) al detectar el atrapamiento.");
+                if (!estadoActual.n11_pacisNoAcercarse) errores.push("• PACIS: Faltó emitir la alocución 'No acercarse a las puertas' a los clientes.");
+                if (!estadoActual.n11_puertasInterestacionBloqueadas) errores.push("• DDU: Faltó bloquear en DDU las puertas de los coches 1 y 2 que quedaron en interestación.");
+                if (!estadoActual.n11_mandosAperturaCorrectos) errores.push("• CONFIGURACIÓN MANDOS: Faltó configurar SC en CM, ST en Lado Andén (I/D) y KLVR en NEUTRO para la apertura.");
+                if (!estadoActual.n11_kloanAutorizado) errores.push("• KLOAN: Faltó comandar la apertura de puertas en andén con KLOAN.");
+                if (!estadoActual.n11_puertasNormalizadasDDU) errores.push("• DDU: Faltó normalizar el bloqueo de puertas en DDU tras concluir el auxilio.");
+                if (!estadoActual.n11_manipuladorSacadoFU) errores.push("• MANIPULADOR: Faltó retirar el manipulador de la posición FU a NEUTRO.");
+                if (!estadoActual.n11_enclavamientoComandado) errores.push("• ENCLAVAMIENTO: Faltó pulsar el botón FD/FG para comandar el cierre y verificar enclavamiento (LMF y Monocoup).");
+                if (!estadoActual.n11_pccInformadoReanudacion) errores.push("• TETRA: Faltó informar a PCC la normalización del tren para coordinar reanudación de corriente y marcha.");
+            }
+
+            let msg = errores.length === 0 ? 
+                "🟢 EVALUACIÓN: APROBADO (100%)\nProcedimiento normativo ejecutado correctamente sin asistencia." : 
+                "🔴 EVALUACIÓN: REPROBADO\nDesvíos normativos detectados:\n\n" + errores.join("\n");
+            
+            actualizarPanel("EVALUACIÓN DE FORMACIÓN", msg);
+        }
+
+        window.onload = () => { 
+            inicializarSimulador(); 
+            setTimeout(() => { imageMapResize(); }, 200);
+        };
+        window.onresize = () => { imageMapResize(); };
+    </script>
+</body>
+</html>
