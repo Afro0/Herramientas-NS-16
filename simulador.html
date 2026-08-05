@@ -195,8 +195,9 @@
         const estacionesL2 = ["Hospital El Pino", "La Cisterna", "Lo Ovalle", "Franklin", "Los Héroes", "Santa Ana", "Cal y Canto", "Vespucio Norte"];
         let estacionActual = "La Cisterna";
         let trenNumero = 108;
-        let nivelActual = 10;
+        let nivelActual = 2;
         let simulacionFinalizadaCritical = false;
+        let ubicacionActual = 'CABINA'; // 'CABINA' o 'SALON'
 
         let equipamiento = {
             chaleco: false, radio: false, llave: false, paleta: false,
@@ -207,6 +208,11 @@
             SC: 'PA', ST: 'AUTO', KLVR: 'ADELANTE', MANIPULADOR: 'NEUTRO',
             KLOAN: 'DESAUTORIZADO', K_AA_IZ: 'NEUTRO / BLOQUEADO', RETROVISORES: 'NEUTRO / CERRADO', K_IH_KSA: 'NORMAL',
             
+            // Nivel 2 y 3
+            n2_puertaBloqueada: false,
+            n2_cintaPuesta: false,
+            n3_puertaLiberada: false,
+
             // Nivel 7
             n7_pacisAnuncioReseteo: false, n7_puertasConfirmadasFD: false, n7_despreparadoHS: false,
             n7_tiempoHS_EN: 0, n7_preparadoEN: false, n7_trenDeslocalizado: false, n7_fiDesaplicado: false,
@@ -216,30 +222,17 @@
             n8_scEnCMC: false, n8_resetSacemPresionado5s: false, n8_platinaIniciadaParpadeante: false, n8_pccInformado: false,
 
             // Nivel 10
-            n10_posicionFS: false,
-            n10_stNeutro: false,
-            n10_klvrNeutro: false,
-            n10_tiempoEspera5sCompletado: false,
-            n10_retomoSC_CMC: false,
-            n10_retomoST_AUTO: false,
-            n10_retomoKLVR_Neutro: false,
-            n10_confirmadoFD: false,
-            n10_fupaTriggered: false,
-            n10_platinaNormalizada: false,
-            n10_pccInformado: false,
+            n10_posicionFS: false, n10_stNeutro: false, n10_klvrNeutro: false,
+            n10_tiempoEspera5sCompletado: false, n10_retomoSC_CMC: false,
+            n10_retomoST_AUTO: false, n10_retomoKLVR_Neutro: false,
+            n10_confirmadoFD: false, n10_fupaTriggered: false, n10_platinaNormalizada: false, n10_pccInformado: false,
 
             // Nivel 11
-            n11_fuAplicado: false,
-            n11_pacisNoAcercarse: false,
-            n11_puertasInterestacionBloqueadas: false,
-            n11_mandosAperturaCorrectos: false,
-            n11_kloanAutorizado: false,
-            n11_notificacionPersonalEstacionRecibida: false,
-            n11_puertasNormalizadasDDU: false,
-            n11_manipuladorSacadoFU: false,
-            n11_enclavamientoComandado: false,
-            n11_lmfObtenido: false,
-            n11_pccInformadoReanudacion: false
+            n11_fuAplicado: false, n11_pacisNoAcercarse: false, n11_puertasInterestacionBloqueadas: false,
+            n11_mandosAperturaCorrectos: false, n11_kloanAutorizado: false,
+            n11_notificacionPersonalEstacionRecibida: false, n11_puertasNormalizadasDDU: false,
+            n11_manipuladorSacadoFU: false, n11_enclavamientoComandado: false,
+            n11_lmfObtenido: false, n11_pccInformadoReanudacion: false
         };
 
         let timerN10 = null;
@@ -257,19 +250,23 @@
 
         function inicializarSimulador() {
             const urlParams = new URLSearchParams(window.location.search);
-            nivelActual = parseInt(urlParams.get('nivel')) || 10;
+            nivelActual = parseInt(urlParams.get('nivel')) || 2;
             estacionActual = estacionesL2[Math.floor(Math.random() * estacionesL2.length)];
             trenNumero = 100 + Math.floor(Math.random() * 20);
 
             simulacionFinalizadaCritical = false;
+            ubicacionActual = 'CABINA';
             historialAcciones = [];
+
+            // Mostrar/Ocultar botón Ruptor según nivel
+            document.getElementById('btn-ext-ruptor').style.display = (nivelActual === 4) ? 'inline-block' : 'none';
 
             switch (nivelActual) {
                 case 2:
-                    actualizarPanel("2. Bloqueo Manual de Puertas", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Falla de enclavamiento de puertas en coche de salón.\nAcción: Diríjase al salón, condene y bloquee la puerta averiada, e instale cinta "Fuera de Servicio".`);
+                    actualizarPanel("2. Bloqueo Manual de Puertas", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Falla de enclavamiento de puertas en coche de salón.\nAcción: Equípese adecuadamente, diríjase al salón, condene y bloquee la puerta averiada.`);
                     break;
                 case 3:
-                    actualizarPanel("3. Liberación Manual de Puertas", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Instrucción de evacuación dictada por P.C.C.\nAcción: Acceda al salón y utilice la llave triangular para la liberación manual de puertas.`);
+                    actualizarPanel("3. Liberación Manual de Puertas", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Instrucción de evacuación dictada por P.C.C.\nAcción: Equípese adecuadamente, acceda al salón y ejecute la liberación manual de puertas con la llave triangular.`);
                     break;
                 case 4:
                     actualizarPanel("4. Aislamiento Freno Neumático (XFR)", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Falla grave de frenado detectada en Coche Motriz.\nAcción: Aplique corte de corriente con Ruptor en andén e intervenga llaves XFR/XFI según protocolo.`);
@@ -336,7 +333,82 @@
             equipamiento.escalera = document.getElementById('eq-escalera').checked;
 
             document.getElementById('modalArmario').style.display = 'none';
-            actualizarPanel("Equipamiento", "Elementos guardados.");
+            actualizarPanel("Equipamiento", "Elementos de protección y herramientas guardados correctamente.");
+        }
+
+        function interactuarPuertaSalon() {
+            if (simulacionFinalizadaCritical) return;
+
+            if (ubicacionActual === 'CABINA') {
+                ubicacionActual = 'SALON';
+                document.getElementById('btn-ext-salon').innerText = "Volver a la Cabina";
+                actualizarPanel("Salón de Pasajeros", "Te encuentras en el salón de pasajeros del coche.");
+
+                if (nivelActual === 2) {
+                    abrirMenuBloqueoSaloon();
+                } else if (nivelActual === 3) {
+                    abrirMenuLiberacionSaloon();
+                }
+            } else {
+                ubicacionActual = 'CABINA';
+                document.getElementById('btn-ext-salon').innerText = "Salir de la cabina";
+                actualizarPanel("Cabina de Conducción", "Has regresado a la cabina principal.");
+            }
+        }
+
+        function abrirMenuBloqueoSaloon() {
+            elementoActualModal = 'BLOQUEO_N2';
+            document.getElementById('modal-titulo').innerText = 'Mecanismo de Puerta - Nivel 2';
+            let container = document.getElementById('modal-options');
+            container.innerHTML = `
+                <button class="btn-opt" onclick="ejecutarBloqueoManual()">🔒 Usar Llave Triangular para Condenar y Bloquear Puerta</button>
+            `;
+            document.getElementById('modalSelector').style.display = 'flex';
+        }
+
+        function ejecutarBloqueoManual() {
+            document.getElementById('modalSelector').style.display = 'none';
+            if (!equipamiento.llave) {
+                actualizarPanel("Salón de Pasajeros", "❌ ERROR: No llevas la Llave Triangular equipada. Vuelve a la cabina e insértala desde '🎒 ¿Qué llevar?'.");
+                return;
+            }
+            estadoActual.n2_puertaBloqueada = true;
+            estadoActual.n2_cintaPuesta = true;
+            actualizarPanel("Salón de Pasajeros", "🔒 PUERTA CONDENADA: Has bloqueado la puerta con la llave triangular e instalado la cinta de 'Fuera de Servicio'. Regresa a cabina para reportar a P.C.C.");
+        }
+
+        function abrirMenuLiberacionSaloon() {
+            elementoActualModal = 'LIBERACION_N3';
+            document.getElementById('modal-titulo').innerText = 'Mecanismo de Puerta - Nivel 3';
+            let container = document.getElementById('modal-options');
+            container.innerHTML = `
+                <button class="btn-opt" onclick="ejecutarLiberacionManual()">🔑 Usar Llave Triangular y accionar Palanca de Liberación</button>
+            `;
+            document.getElementById('modalSelector').style.display = 'flex';
+        }
+
+        function ejecutarLiberacionManual() {
+            document.getElementById('modalSelector').style.display = 'none';
+            if (!equipamiento.llave) {
+                actualizarPanel("Salón de Pasajeros", "❌ ERROR: No llevas la Llave Triangular equipada. Vuelve a la cabina e insértala desde '🎒 ¿Qué llevar?'.");
+                return;
+            }
+            estadoActual.n3_puertaLiberada = true;
+            actualizarPanel("Salón de Pasajeros", "🔓 LIBERACIÓN MANUAL EJECUTADA: Has abierto el mecanismo con la llave triangular y accionado la palanca. Regresa a cabina para reportar a P.C.C.");
+        }
+
+        function interactuarRuptor() {
+            if (simulacionFinalizadaCritical) return;
+            actualizarPanel("Acción Exterior", "⚡ Ruptor accionado. Se ha cortado la energía de tracción en el coche.");
+        }
+
+        function accionExterior(tipoAccion) {
+            if (simulacionFinalizadaCritical) return;
+            if (tipoAccion === 'VERIFICAR_ENTORNO') {
+                actualizarPanel("Inspección Exterior", "Mirando entorno y vías desde la ventana trasera de la cabina.");
+            } else if (tipoAccion === 'VERIFICAR_ANDEN_CABINA') {
+                actualizarPanel("Inspección de Andén", "Verificando la longitud del andén y estado visual desde la puerta de cabina.");
+            }
         }
 
         function gatillarGameOverCritico(mensaje) {
@@ -381,6 +453,8 @@
                 container.innerHTML = `<button class="btn-opt" onclick="emitirPACIS('N7_ALUMBRADO_RESET')">📢 "Señores pasajeros, se les informa que el alumbrado normal del tren se apagará por algunos momentos..."</button>`;
             } else if (nivelActual === 11) {
                 container.innerHTML = `<button class="btn-opt" onclick="emitirPACIS('N11_NO_ACERCARSE')">📢 "Señores pasajeros, por favor no acercarse a las puertas"</button>`;
+            } else {
+                container.innerHTML = `<button class="btn-opt" onclick="emitirPACIS('GENERAL')">📢 Emitir aviso estándar a clientes</button>`;
             }
             document.getElementById('modalSelector').style.display = 'flex';
         }
@@ -393,6 +467,8 @@
             } else if (tipo === 'N11_NO_ACERCARSE') {
                 estadoActual.n11_pacisNoAcercarse = true;
                 actualizarPanel("PACIS", "📢 Alocución emitida: 'Señores pasajeros, por favor no acercarse a las puertas'.");
+            } else {
+                actualizarPanel("PACIS", "Alocución general emitida.");
             }
         }
 
@@ -402,7 +478,9 @@
             document.getElementById('modal-titulo').innerText = 'Micrófono TETRA - P.C.C.';
             let container = document.getElementById('modal-options');
 
-            if (nivelActual === 8) {
+            if (nivelActual === 2 || nivelActual === 3) {
+                container.innerHTML = `<button class="btn-opt" onclick="comunicarPCC('INFORMAR_SALON')">📻 Informar a P.C.C. término de procedimiento en salón</button>`;
+            } else if (nivelActual === 8) {
                 container.innerHTML = `<button class="btn-opt" onclick="comunicarPCC('N8_INFORMAR_RESET')">📻 Informar estado de platina parpadeante a PCC</button>`;
             } else if (nivelActual === 10) {
                 container.innerHTML = `<button class="btn-opt" onclick="comunicarPCC('N10_INFORMAR_PLATINA')">📻 Informar a PCC estado de la platina</button>`;
@@ -410,6 +488,8 @@
                 container.innerHTML = `<button class="btn-opt" onclick="comunicarPCC('N7_INFORMAR_DESLOCALIZACION')">📻 Informar deslocalización a PCC</button>`;
             } else if (nivelActual === 11) {
                 container.innerHTML = `<button class="btn-opt" onclick="comunicarPCC('N11_INFORMAR_PCC_FINAL')">📻 Informar a PCC normalización de tren tras auxilio y solicitar reanudación de marcha</button>`;
+            } else {
+                container.innerHTML = `<button class="btn-opt" onclick="comunicarPCC('GENERAL')">📻 Comunicar novedad a P.C.C.</button>`;
             }
             document.getElementById('modalSelector').style.display = 'flex';
         }
@@ -428,6 +508,8 @@
             } else if (momento === 'N11_INFORMAR_PCC_FINAL') {
                 estadoActual.n11_pccInformadoReanudacion = true;
                 actualizarPanel("P.C.C.", `📻 P.C.C.: "Enterado Conductor Tren ${trenNumero}. Se reanuda corriente de tracción. Autorizado a continuar marcha."`);
+            } else {
+                actualizarPanel("P.C.C.", `📻 P.C.C.: "Recibido Conductor. Mantenga informado."`);
             }
         }
 
@@ -454,6 +536,8 @@
                 textoDDU = estadoActual.n10_fupaTriggered ? "[Platina SACEM]\n🚨 FU PA ACTIVADO." : (estadoActual.n10_platinaNormalizada ? "[Platina SACEM]\n🟢 Platina normalizada (PA)." : "[Platina SACEM]\n⚠️ PANTALLA FIJA (Congelada).");
             } else if (nivelActual === 7) {
                 textoDDU = estadoActual.n7_preparadoEN ? (estadoActual.n7_fiDesaplicado ? "[DDU] TREN DESLOCALIZADO - FI DESAPLICADO" : "[DDU] TREN DESLOCALIZADO - FI APLICADO") : "[DDU] Normal";
+            } else {
+                textoDDU = "[DDU] Estado de tren normal.";
             }
             actualizarPanel("Pantalla DDU / Platina SACEM", textoDDU);
         }
@@ -515,7 +599,6 @@
         }
 
         function evaluarMecanicaNivel10() {
-            // Verificar configuración inicial de reseteo: SC: FS, ST: N, KLVR: NEUTRO
             if (estadoActual.SC === 'FS' && estadoActual.ST === 'N' && estadoActual.KLVR === 'NEUTRO') {
                 estadoActual.n10_posicionFS = true;
                 estadoActual.n10_stNeutro = true;
@@ -530,7 +613,6 @@
                 }
             }
 
-            // Verificar re-toma de mandos: SC: CMC, ST: AUTO, KLVR: NEUTRO
             if (estadoActual.n10_tiempoEspera5sCompletado && estadoActual.SC === 'CMC' && estadoActual.ST === 'AUTO' && estadoActual.KLVR === 'NEUTRO') {
                 estadoActual.n10_retomoSC_CMC = true;
                 estadoActual.n10_retomoST_AUTO = true;
@@ -636,7 +718,13 @@
             if (simulacionFinalizadaCritical) return;
             let errores = [];
 
-            if (nivelActual === 8) {
+            if (nivelActual === 2) {
+                if (!equipamiento.llave) errores.push("• EQUIPAMIENTO: Faltó equipar la Llave Triangular.");
+                if (!estadoActual.n2_puertaBloqueada) errores.push("• INTERVENCIÓN: Faltó realizar el bloqueo/condenación manual de la puerta.");
+            } else if (nivelActual === 3) {
+                if (!equipamiento.llave) errores.push("• EQUIPAMIENTO: Faltó equipar la Llave Triangular.");
+                if (!estadoActual.n3_puertaLiberada) errores.push("• INTERVENCIÓN: Faltó accionar la liberación manual de la puerta en salón.");
+            } else if (nivelActual === 8) {
                 if (estadoActual.SC !== 'CMC') errores.push("• SC: Faltó disponer el conmutador SC en 'CMC'.");
                 if (!estadoActual.n8_resetSacemPresionado5s) errores.push("• BT3: Faltó pulsar el botón rojo 'Reset SACEM' por 5 segundos.");
                 if (!estadoActual.n8_platinaIniciadaParpadeante) errores.push("• TEMPORIZACIÓN: No esperó los 20 segundos requeridos para el encendido parpadeante de la platina.");
@@ -649,7 +737,6 @@
                 if (!estadoActual.n10_retomoST_AUTO) errores.push("• RE-TOMA MANDOS: Faltó volver a disponer ST en 'AUTO'.");
                 if (!estadoActual.n10_confirmadoFD) errores.push("• CONFIRMACIÓN: Faltó presionar el botón FD (o FG) para confirmar el enclavamiento.");
                 
-                // EVALUACIÓN CONDICIONAL: Solo si salta FU PA exige los pasos de reseteo del tren
                 if (estadoActual.n10_fupaTriggered) {
                     if (!estadoActual.n7_puertasConfirmadasFD) errores.push("• RESETEO TREN (tras FU PA): Faltó re-confirmar enclavamiento con FD/FG.");
                     if (!estadoActual.n7_despreparadoHS || !estadoActual.n7_preparadoEN) errores.push("• RESETEO TREN (tras FU PA): Faltó realizar la secuencia HS/EN.");
