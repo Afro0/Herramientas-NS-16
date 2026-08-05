@@ -102,7 +102,6 @@
 </head>
 <body>
 
-    <!-- Audio para los botones FD/FG -->
     <audio id="audio-monocoup" src="freesound_community-bell-98033.mp3" preload="auto"></audio>
 
     <div class="cabina-wrapper">
@@ -230,13 +229,14 @@
 
         let estadoActual = {
             SC: 'PA', ST: 'AUTO', KLVR: 'ADELANTE', MANIPULADOR: 'NEUTRO',
-            KLOAN: 'DESAUTORIZADO', K_AA_IZ: 'NEUTRO / BLOQUEADO', RETROVISORES: 'NEUTRO / CERRADO', K_IH_KSA: 'NORMAL',
+            KLOAN: 'DESAUTORIZADO', K_AA_IZ: 'NEUTRO / BLOQUEADO', RETROVISORES: 'NEUTRO / CERRADO', 
+            K_IH_KSA: 'NORMAL',
             n11_comunicacionKsaAtendida: false,
             n11_alocucionPasajeros: false,
             n11_pccInformado: false,
-            n7_puertasConfirmadasFD: false,
-            n7_despreparadoHS: false,
-            n7_preparadoEN: false
+            n11_verificacionEntorno: false,
+            n11_verificacionAnden: false,
+            n11_detenidoLetreroNoPasar: false
         };
 
         const ayudaMemoria = {
@@ -342,17 +342,7 @@
             simulacionFinalizadaCritical = false;
             cargarAyudaMemoria();
 
-            if (nivelActual === 2) {
-                actualizarPanel("2. Bloqueo de Puertas", `Estación ${estacionActual} - Tren ${trenNumero}\nPuerta de pasajeros averiada. Realice el procedimiento normativo de bloqueo de puerta.`);
-            } else if (nivelActual === 3) {
-                actualizarPanel("3. Liberación de Puertas", `Estación ${estacionActual} - Tren ${trenNumero}\nSe requiere evacuación de pasajeros. Ejecute la liberación manual de la primera puerta.`);
-            } else if (nivelActual === 7) {
-                actualizarPanel("7. Reseteo de Tren en Estación", `Estación ${estacionActual} - Tren ${trenNumero}\nSistemas informáticos bloqueados. Se requiere reseteo de cabina en estación conforme a norma.`);
-            } else if (nivelActual === 8) {
-                actualizarPanel("8. Reseteo Ordenador SACEM", `Estación ${estacionActual} - Tren ${trenNumero}\n⚠️ Platina del SACEM completamente APAGADA.\nSiguiendo instrucciones de PCC, disponga SC en CMC y accione el botón Reset SACEM (BT3) por 5s.`);
-            } else if (nivelActual === 10) {
-                actualizarPanel("10. Reseteo Platina SACEM", `Estación ${estacionActual} - Tren ${trenNumero}\n⚠️ Platina del SACEM congelada en FIJO.\nBajo instrucciones de PCC, deje mandos en neutro y vuelva a tomarlos.`);
-            } else if (nivelActual === 11) {
+            if (nivelActual === 11) {
                 actualizarPanel("11. KSA en PA con Retroceso", `Estación ${estacionActual} - Tren ${trenNumero}\n🚨 Alarma de Pasajero (K.SA) activada en PA. Atienda la llamada y aplique protocolo con retroceso.`);
             }
         }
@@ -403,20 +393,20 @@
             actualizarPanel("¿Qué llevar?", "🎒 Elementos seleccionados guardados en equipamiento.");
         }
 
-        function gatillarGameOverCritico(mensaje) {
-            simulacionFinalizadaCritical = true;
-            let box = document.getElementById('modal-box');
-            document.getElementById('modal-titulo').innerText = "⚡ ACCIDENTE CRÍTICO DE SEGURIDAD";
-            document.getElementById('modal-titulo').className = "game-over-title";
-            
-            box.className = "modal-content game-over-modal";
-            
-            let container = document.getElementById('modal-options');
-            container.innerHTML = `
-                <p style="color:#ff8888; font-weight:bold; font-size:14px;">${mensaje}</p>
-                <button class="btn-ui btn-reset" style="margin-top:15px;" onclick="location.reload()">Reiniciar Simulador</button>
-            `;
-            document.getElementById('modalSelector').style.display = 'flex';
+        function accionExterior(tipo) {
+            if (simulacionFinalizadaCritical) return;
+            if (tipo === 'VERIFICAR_ENTORNO') {
+                estadoActual.n11_verificacionEntorno = true;
+                actualizarPanel("Mirar Entorno / Vías", "👁️ Observando espejos y ventanas hacia atrás. Vías y entorno despejados para maniobra.");
+            } else if (tipo === 'VERIFICAR_ANDEN_CABINA') {
+                estadoActual.n11_verificacionAnden = true;
+                actualizarPanel("Verificar Andén", "👁️ Mirada desde la puerta de cabina hacia el andén. Sin despeje visual de anormalidad.");
+            }
+        }
+
+        function interactuarPuertaSalon() {
+            if (simulacionFinalizadaCritical) return;
+            actualizarPanel("Salir de Cabina", "🚶 Saliendo a salón / andén para intervención directa.");
         }
 
         function interactuarPACIS() {
@@ -438,20 +428,11 @@
 
                 let btnAnuncio = document.createElement('button');
                 btnAnuncio.className = 'btn-opt';
-                btnAnuncio.innerHTML = '📢 Informar a pasajeros el motivo de detención y movimiento de retroceso';
+                btnAnuncio.innerHTML = '📢 Informar a pasajeros motivo de detención y retroceso';
                 btnAnuncio.onclick = () => {
                     estadoActual.n11_alocucionPasajeros = true;
                     document.getElementById('modalSelector').style.display = 'none';
-                    actualizarPanel("PACIS - Altavoces", "📢 Anuncio emitido a salón: Se informa a los pasajeros el retroceso asistido del tren.");
-                };
-                container.appendChild(btnAnuncio);
-            } else {
-                let btnAnuncio = document.createElement('button');
-                btnAnuncio.className = 'btn-opt';
-                btnAnuncio.innerHTML = '📢 Emitir alocución general a pasajeros';
-                btnAnuncio.onclick = () => {
-                    document.getElementById('modalSelector').style.display = 'none';
-                    actualizarPanel("Megafonía PACIS", "📢 Alocución emitida a los pasajeros.");
+                    actualizarPanel("PACIS - Altavoces", "📢 Anuncio emitido: Se informa a los pasajeros la maniobra de retroceso asistido del tren.");
                 };
                 container.appendChild(btnAnuncio);
             }
@@ -467,11 +448,11 @@
 
             let btnPcc = document.createElement('button');
             btnPcc.className = 'btn-opt';
-            btnPcc.innerHTML = '📻 Comunicar novedad / Solicitar autorización a P.C.C.';
+            btnPcc.innerHTML = '📻 Comunicar novedad K.SA y solicitar orden de retroceso a P.C.C.';
             btnPcc.onclick = () => {
                 estadoActual.n11_pccInformado = true;
                 document.getElementById('modalSelector').style.display = 'none';
-                actualizarPanel("P.C.C.", `📻 P.C.C.: "Enterado Conductor Tren ${trenNumero}. Autorizado retroceso conforme a norma."`);
+                actualizarPanel("P.C.C.", `📻 P.C.C.: "Enterado Conductor Tren ${trenNumero}. Autorizado retroceso a velocidad reducida (máx 5 km/h)."`);
             };
             container.appendChild(btnPcc);
 
@@ -480,7 +461,7 @@
 
         function interactuarDDU() {
             if (simulacionFinalizadaCritical) return;
-            actualizarPanel("Pantalla DDU", "[DDU - Monitor de Estado]\nVisualización de puertas y estado de alarmas de emergencia activa.");
+            actualizarPanel("Pantalla DDU", "[DDU - Monitor]\nIdentificación de alarma de emergencia activada en coche.");
         }
 
         function abrirSelector(elemento, opciones) {
@@ -500,7 +481,23 @@
 
         function seleccionarOpcion(elemento, opcion) {
             document.getElementById('modalSelector').style.display = 'none';
-            estadoActual[elemento] = opcion;
+            
+            // Corrección en guardado de variables internas
+            if (elemento === 'K.IH.KSA') {
+                estadoActual.K_IH_KSA = opcion;
+            } else {
+                estadoActual[elemento] = opcion;
+            }
+
+            // Lógica de tracción en retroceso
+            if (elemento === 'MANIPULADOR' && opcion === 'TRACCIÓN 5 KM/H' && nivelActual === 11) {
+                if (estadoActual.KLVR === 'ATRÁS' && estadoActual.SC === 'CML') {
+                    estadoActual.n11_detenidoLetreroNoPasar = true;
+                    actualizarPanel("Retroceso Asistido (5 Km/h)", "🚆 Tren traccionando en retroceso a velocidad normada (máx 5 km/h).\n🛑 Se alcanza posición correcta y se detiene el tren frente al letrero 'NO PASAR'.");
+                    return;
+                }
+            }
+
             actualizarPanel(`Mando ${elemento}`, `Posición seleccionada: ${opcion}`);
         }
 
@@ -508,11 +505,6 @@
             if (simulacionFinalizadaCritical) return;
             if (tipo === 'FG' || tipo === 'FD') {
                 reproducirSonidoMonocoup();
-            } else if (tipo === 'HS') {
-                if (nivelActual === 7 && !estadoActual.n7_puertasConfirmadasFD) {
-                    gatillarGameOverCritico("⚡ ACCIDENTE CRÍTICO DE SEGURIDAD\nEjecutó la des-preparación del tren (HS) sin haber confirmado enclavamiento de puertas con FD/FG.");
-                    return;
-                }
             }
             actualizarPanel("Acción Pupitre", `Pulsador ${tipo} activado.`);
         }
@@ -531,9 +523,11 @@
             if (nivelActual === 11) {
                 if (estadoActual.K_IH_KSA !== 'AISLADO') errores.push("• BT3: Faltó aislar la alarma K.SA situando el conmutador K.IH.KSA en 'AISLADO'.");
                 if (!estadoActual.n11_comunicacionKsaAtendida) errores.push("• PACIS: Faltó contestar/atender la llamada de comunicación de emergencia K.SA.");
+                if (!estadoActual.n11_verificacionEntorno) errores.push("• ENTORNO: Faltó verificar entorno/vías (mirar hacia atrás) antes de mover el tren.");
                 if (!estadoActual.n11_pccInformado) errores.push("• TETRA: Faltó solicitar autorización a P.C.C. antes de iniciar maniobra de retroceso.");
                 if (!estadoActual.n11_alocucionPasajeros) errores.push("• PACIS: Faltó informar a los pasajeros sobre la maniobra de retroceso asistido.");
-                if (estadoActual.KLVR !== 'ATRÁS') errores.push("• INVERSOR: KLVR debía estar en 'ATRÁS' para ejecutar la maniobra.");
+                if (estadoActual.KLVR !== 'ATRÁS') errores.push("• INVERSOR: KLVR debía estar dispuesto en 'ATRÁS' para ejecutar la maniobra.");
+                if (!estadoActual.n11_detenidoLetreroNoPasar) errores.push("• TRACCIÓN: Faltó traccionar a 5 km/h hasta detenerse frente al letrero 'NO PASAR'.");
             }
 
             let msg = errores.length === 0 ? 
