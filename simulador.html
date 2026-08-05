@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Cabina Metro NS-16 - Formación de Conductores</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #0d0e12;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; justify-content: center; align-items: flex-start;
+            min-height: 100vh; color: #ffffff; overflow-x: hidden; padding: 10px;
+        }
+        .cabina-wrapper {
+            position: relative; width: 100vw; max-width: 1400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.9); border-radius: 8px; overflow: hidden;
+            background: #000; margin: 0 auto;
+        }
+        .vista-container { display: none; position: relative; width: 100%; height: auto; }
+        .vista-container.activa { display: block; }
+        .cabina-img { width: 100%; height: auto; display: block; object-fit: contain; }
+        area { cursor: pointer; }
+
+        .top-bar { position: absolute; top: 15px; right: 20px; display: flex; gap: 10px; z-index: 20; }
+        .nav-bar { position: absolute; top: 15px; left: 420px; display: flex; gap: 8px; z-index: 20; }
+        .ext-bar {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 8px; z-index: 20; background: rgba(0,0,0,0.85);
+            padding: 8px 12px; border-radius: 8px; border: 1px solid #ffcc00;
+        }
+
+        .btn-ui {
+            padding: 8px 14px; font-size: 12px; font-weight: bold; border: none;
+            border-radius: 5px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: transform 0.1s; text-decoration: none; display: inline-block;
+        }
+        .btn-ui:active { transform: scale(0.95); }
+        .btn-nav { background-color: #34495e; color: white; border: 1px solid #5d6d7e; }
+        .btn-nav.activo { background-color: #f39c12; color: black; border-color: #f1c40f; }
+        .btn-menu { background-color: #8e44ad; color: white; }
+        .btn-reset { background-color: #e74c3c; color: white; }
+        .btn-finish { background-color: #2ecc71; color: white; }
+        .btn-ext { background-color: #3498db; color: white; }
+        .btn-armario { background-color: #e67e22; color: white; }
+        .btn-ayuda { background-color: #0284c7; color: white; border: 1px solid #38bdf8; }
+
+        .panel-pantalla {
+            position: absolute; top: 15px; left: 20px; background: rgba(10, 12, 18, 0.94);
+            border: 2px solid #ffcc00; padding: 12px 16px; border-radius: 6px; width: 380px;
+            z-index: 10; box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+        }
+        .panel-pantalla h2 { color: #ffcc00; font-size: 14px; margin-bottom: 4px; text-transform: uppercase; }
+        .panel-pantalla p { font-size: 12px; color: #dddddd; line-height: 1.35; white-space: pre-line; }
+
+        /* Panel Lateral - Ayuda Memoria */
+        .sidebar-ayuda {
+            position: fixed; top: 0; right: -350px; width: 350px; height: 100vh;
+            background-color: rgba(15, 23, 42, 0.97); border-left: 2px solid #ffcc00;
+            box-shadow: -5px 0 25px rgba(0,0,0,0.8); transition: right 0.3s ease;
+            z-index: 150; display: flex; flex-direction: column; padding: 20px;
+        }
+        .sidebar-ayuda.open { right: 0; }
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ffcc00; padding-bottom: 10px; margin-bottom: 15px; }
+        .sidebar-header h3 { color: #ffcc00; font-size: 16px; text-transform: uppercase; }
+        .btn-close-sidebar { background: none; border: none; color: #ffcc00; font-size: 20px; cursor: pointer; }
+        .sidebar-content { overflow-y: auto; flex: 1; }
+        .sidebar-content ul { list-style: none; }
+        .sidebar-content li { font-size: 12px; color: #e2e8f0; padding: 8px 0; border-bottom: 1px solid #334155; display: flex; align-items: flex-start; gap: 8px; line-height: 1.3; }
+        .sidebar-content li::before { content: "•"; color: #ffcc00; font-weight: bold; }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.88); z-index: 100; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: #181a20; padding: 22px; border-radius: 8px; border: 2px solid #ffcc00;
+            text-align: center; min-width: 360px; max-width: 580px; color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.9);
+        }
+        .modal-content h4 { margin-bottom: 8px; color: #ffcc00; font-size: 15px; text-transform: uppercase; }
+        .modal-content p { font-size: 13px; margin-bottom: 14px; color: #ddd; line-height: 1.4; text-align: left; }
+        .modal-options { display: flex; flex-direction: column; gap: 8px; text-align: left; }
+        
+        .btn-opt {
+            padding: 11px 13px; background: #252830; color: white; border: 1px solid #444;
+            border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px;
+            transition: all 0.2s ease; display: flex; align-items: center; justify-content: space-between;
+        }
+        .btn-opt:hover { background: #f39c12; color: #000; border-color: #f1c40f; }
+
+        .armario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; text-align: left; }
+        .armario-item {
+            background: #252830; padding: 10px; border-radius: 5px; border: 1px solid #444;
+            display: flex; align-items: center; gap: 10px; font-size: 12px; cursor: pointer;
+        }
+        .armario-item input { cursor: pointer; transform: scale(1.2); }
+
+        .game-over-modal { border-color: #e74c3c !important; background: #2a0808 !important; }
+        .game-over-title { color: #e74c3c !important; font-size: 18px !important; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/image-map-resizer/1.0.10/js/imageMapResizer.min.js"></script>
+</head>
+<body>
+
+    <!-- Audio para los botones FD/FG -->
+    <audio id="audio-monocoup" src="freesound_community-bell-98033.mp3" preload="auto"></audio>
+
+    <div class="cabina-wrapper">
+        <div class="panel-pantalla">
+            <h2 id="info-titulo">Cargando Nivel...</h2>
+            <p id="info-desc">Inicializando protocolo operativo...</p>
+        </div>
+
+        <div class="nav-bar">
+            <button id="btn-vista-pupitre" class="btn-ui btn-nav activo" onclick="cambiarVista('pupitre')">Pupitre Principal</button>
+            <button id="btn-vista-bt3" class="btn-ui btn-nav" onclick="cambiarVista('bt3')">Armario BT3</button>
+            <button class="btn-ui btn-armario" onclick="abrirArmarioEquipamiento()">🎒 ¿Qué llevar?</button>
+        </div>
+
+        <div class="top-bar">
+            <button class="btn-ui btn-ayuda" onclick="toggleAyudaMemoria()">❓ Ayuda Memoria</button>
+            <a href="menu_simulador.html" class="btn-ui btn-menu">Cambiar Nivel</a>
+            <button class="btn-ui btn-reset" onclick="resetearSimulador()">Resetear</button>
+            <button class="btn-ui btn-finish" onclick="evaluarProcedimiento()">Terminar</button>
+        </div>
+
+        <div class="ext-bar" id="ext-bar">
+            <button id="btn-ext-entorno" class="btn-ui btn-ext" onclick="accionExterior('VERIFICAR_ENTORNO')">Mirar Entorno / Vías (Atrás)</button>
+            <button id="btn-ext-anden" class="btn-ui btn-ext" style="background-color:#9b59b6;" onclick="accionExterior('VERIFICAR_ANDEN_CABINA')">Verificar Andén desde Puerta Cabina</button>
+            <button id="btn-ext-salon" class="btn-ui btn-ext" style="background-color:#e67e22;" onclick="interactuarPuertaSalon()">Salir de la cabina</button>
+        </div>
+
+        <!-- VISTA PUPITRE -->
+        <div id="vista-pupitre" class="vista-container activa">
+            <img src="cabina.jpg" usemap="#mapa-pupitre" class="cabina-img" alt="Cabina NS-16">
+            <map name="mapa-pupitre">
+                <area target="" alt="FG" title="Cierre Puertas Izquierdas (FG)" href="javascript:accionBoton('FG')" coords="569,1279,23" shape="circle">
+                <area target="" alt="FD" title="Cierre Puertas Derechas (FD)" href="javascript:accionBoton('FD')" coords="2304,1301,21" shape="circle">
+                <area target="" alt="EN" title="Energización (EN)" href="javascript:accionBoton('EN')" coords="2349,1223,25" shape="circle">
+                <area target="" alt="HS" title="Des-preparación / Abonado (HS)" href="javascript:accionBoton('HS')" coords="2257,1218,26" shape="circle">
+                <area target="" alt="MANIPULADOR" title="Manipulador de Conducción" href="javascript:abrirSelector('MANIPULADOR', ['TRACCIÓN 5 KM/H', 'TRACCIÓN NORMAL', 'NEUTRO', 'FRENO', 'FU'])" coords="1879,1150,2001,1234" shape="rect">
+                <area target="" alt="PACIS" title="PACIS / Megafonía" href="javascript:interactuarPACIS()" coords="2028,903,2294,1094" shape="rect">
+                <area target="" alt="DDU" title="Pantalla DDU / Platina SACEM" href="javascript:interactuarDDU()" coords="1581,840,1839,1049" shape="rect">
+                <area target="" alt="RETROVISORES" title="Conmutador Espejos Retrovisores (K.ES)" href="javascript:abrirSelector('RETROVISORES', ['IZQUIERDA', 'NEUTRO / CERRADO', 'DERECHA'])" coords="1521,1128,28" shape="circle">
+                <area target="" alt="AP FI" title="Aplicación Freno de Inmovilización (AP FI)" href="javascript:accionBoton('AP_FI')" coords="1578,1128,22" shape="circle">
+                <area target="" alt="DAP FI" title="Desaplicación Freno de Inmovilización (DAP FI)" href="javascript:accionBoton('DAP_FI')" coords="1638,1131,21" shape="circle">
+                <area target="" alt="PTT" title="PTT (Megafonía Salón)" href="javascript:interactuarPACIS()" coords="1459,1129,20" shape="circle">
+                <area target="" alt="LMFS" title="Lámparas Azules Enclavamiento Puertas (LMFS)" href="javascript:accionBoton('LMFS')" coords="1327,844,48" shape="circle">
+                <area target="" alt="KLVR" title="Inversor de Marcha (KLVR)" href="javascript:abrirSelector('KLVR', ['ADELANTE', 'NEUTRO', 'ATRÁS'])" coords="1158,981,1208,1088" shape="rect">
+                <area target="" alt="MICROFONO TETRA" title="Micrófono TETRA (PCC)" href="javascript:abrirOpcionesTETRA()" coords="1026,1073,1148,1208" shape="rect">
+                <area target="" alt="SC" title="Selector Modo Conducción (SC)" href="javascript:abrirSelector('SC', ['PA', 'CMC', 'CML', 'FS'])" coords="402,1141,528,1260" shape="rect">
+                <area target="" alt="ST" title="Selector Sentido (ST)" href="javascript:abrirSelector('ST', ['I', 'AUTO', 'D', 'N'])" coords="786,1126,915,1218" shape="rect">
+                <area target="" alt="KLOAN" title="Comando Apertura Puertas (KLOAN)" href="javascript:abrirSelector('KLOAN', ['DESAUTORIZADO', 'AUTORIZADO (APERTURA)'])" coords="1216,1112,1266,1214" shape="rect">
+                <area target="" alt="K.AA.IZ" title="Autorización Puertas Izquierdas (K.AA.IZ)" href="javascript:abrirSelector('K.AA.IZ', ['NEUTRO / BLOQUEADO', 'AUTORIZADO (IZQUIERDA)'])" coords="1101,844,24" shape="circle">
+            </map>
+        </div>
+
+        <!-- VISTA BT3 COMPLETA -->
+        <div id="vista-bt3" class="vista-container">
+            <img src="bt3.jpg" usemap="#mapa-bt3" class="cabina-img" alt="Armario BT3">
+            <map name="mapa-bt3">
+                <area target="" alt="RESET SACEM" title="RESET SACEM (Botón Rojo)" href="javascript:accionResetSacem()" coords="232,451,105" shape="circle">
+                <area target="" alt="K.A.D.I" title="K.A.D.I" href="javascript:abrirSelector('K.A.D.I', ['NORMAL', 'AISLADO'])" coords="509,459,107" shape="circle">
+                <area target="" alt="K.AA.LEX" title="K.AA.LEX" href="javascript:abrirSelector('K.AA.LEX', ['NORMAL', 'AISLADO'])" coords="795,455,95" shape="circle">
+                <area target="" alt="K.SE.TR" title="K.SE.TR" href="javascript:abrirSelector('K.SE.TR', ['NORMAL', 'AISLADO'])" coords="1073,445,108" shape="circle">
+                <area target="" alt="ALIMENTACION TETRA" title="ALIMENTACION TETRA" href="javascript:abrirSelector('ALIMENTACION TETRA', ['ON', 'OFF'])" coords="1368,461,113" shape="circle">
+                <area target="" alt="K.IH.KSA" title="K.IH.KSA" href="javascript:abrirSelector('K.IH.KSA', ['NORMAL', 'AISLADO'])" coords="1652,455,109" shape="circle">
+                <area target="" alt="K.L.P" title="K.L.P" href="javascript:abrirSelector('K.L.P', ['NORMAL', 'AISLADO'])" coords="1953,456,108" shape="circle">
+                <area target="" alt="K.IS.BU.PU" title="K.IS.BU.PU" href="javascript:abrirSelector('K.IS.BU.PU', ['NORMAL', 'AISLADO'])" coords="316,1267,118" shape="circle">
+                <area target="" alt="K.A.BT" title="K.A.BT" href="javascript:abrirSelector('K.A.BT', ['NORMAL', 'AISLADO'])" coords="710,1233,113" shape="circle">
+                <area target="" alt="K.IS.ND.FR" title="K.IS.ND.FR" href="javascript:abrirSelector('K.IS.ND.FR', ['NORMAL', 'AISLADO'])" coords="1080,1247,128" shape="circle">
+                <area target="" alt="CONTROL VAC" title="CONTROL VAC" href="javascript:abrirSelector('CONTROL VAC', ['NORMAL', 'AISLADO'])" coords="1459,1207,96" shape="circle">
+                <area target="" alt="K.FU VIAP" title="K.FU VIAP" href="javascript:abrirSelector('K.FU VIAP', ['NORMAL', 'AISLADO'])" coords="1825,1192,105" shape="circle">
+                <area target="" alt="K.IS.HM" title="K.IS.HM" href="javascript:abrirSelector('K.IS.HM', ['NORMAL', 'AISLADO'])" coords="384,1626,111" shape="circle">
+                <area target="" alt="K.A.TR.DI" title="K.A.TR.DI" href="javascript:abrirSelector('K.A.TR.DI', ['NORMAL', 'AISLADO'])" coords="749,1627,116" shape="circle">
+                <area target="" alt="K.SO.TCMS" title="K.SO.TCMS" href="javascript:abrirSelector('K.SO.TCMS', ['NORMAL', 'AISLADO'])" coords="1102,1609,115" shape="circle">
+                <area target="" alt="K.IH.VT6" title="K.IH.VT6" href="javascript:abrirSelector('K.IH.VT6', ['NORMAL', 'AISLADO'])" coords="1462,1604,119" shape="circle">
+                <area target="" alt="BOTON PREPARACION DE EMERGENCIA" title="BOTON PREPARACION DE EMERGENCIA" href="javascript:accionBoton('PREPARACION_EMERGENCIA')" coords="1800,1567,104" shape="circle">
+            </map>
+        </div>
+    </div>
+
+    <!-- Panel Lateral Desplegable - Ayuda Memoria -->
+    <div id="sidebar-ayuda" class="sidebar-ayuda">
+        <div class="sidebar-header">
+            <h3>Ayuda Memoria</h3>
+            <button class="btn-close-sidebar" onclick="toggleAyudaMemoria()">✖</button>
+        </div>
+        <div class="sidebar-content">
+            <ul id="lista-ayuda"></ul>
+        </div>
+    </div>
+
+    <!-- Modales de Operación -->
+    <div id="modalSelector" class="modal">
+        <div class="modal-content" id="modal-box">
+            <h4 id="modal-titulo">Seleccionar Posición</h4>
+            <div id="modal-options" class="modal-options"></div>
+        </div>
+    </div>
+
+    <div id="modalArmario" class="modal">
+        <div class="modal-content">
+            <h4>🎒 ¿Qué llevar? (Equipamiento / EPP)</h4>
+            <p>Seleccione los elementos que equipará para las intervenciones fuera de cabina:</p>
+            <div class="armario-grid">
+                <label class="armario-item"><input type="checkbox" id="eq-chaleco"> 🦺 Chaleco reflectante</label>
+                <label class="armario-item"><input type="checkbox" id="eq-radio"> 📻 Radio portátil</label>
+                <label class="armario-item"><input type="checkbox" id="eq-llave"> 🔑 Llave triangular</label>
+                <label class="armario-item"><input type="checkbox" id="eq-paleta"> 🪵 Paleta de replegado</label>
+                <label class="armario-item"><input type="checkbox" id="eq-linterna"> 🔦 Linterna</label>
+                <label class="armario-item"><input type="checkbox" id="eq-extintor"> 🧯 Extintor</label>
+                <label class="armario-item"><input type="checkbox" id="eq-escalera"> 🪜 Escalera</label>
+            </div>
+            <button class="btn-ui btn-finish" style="width:100%;" onclick="guardarEquipamiento()">Confirmar Elementos Equipados</button>
+        </div>
+    </div>
+
+    <script>
+        const estacionesL2 = ["Hospital El Pino", "La Cisterna", "Lo Ovalle", "Franklin", "Los Héroes", "Santa Ana", "Cal y Canto", "Vespucio Norte"];
+        let estacionActual = "La Cisterna";
+        let trenNumero = 108;
+        let nivelActual = 11;
+        let simulacionFinalizadaCritical = false;
+
+        let equipamiento = {
+            chaleco: false, radio: false, llave: false, paleta: false,
+            linterna: false, extintor: false, escalera: false
+        };
+
+        let estadoActual = {
+            SC: 'PA', ST: 'AUTO', KLVR: 'ADELANTE', MANIPULADOR: 'NEUTRO',
+            KLOAN: 'DESAUTORIZADO', K_AA_IZ: 'NEUTRO / BLOQUEADO', RETROVISORES: 'NEUTRO / CERRADO', K_IH_KSA: 'NORMAL',
+            n11_comunicacionKsaAtendida: false,
+            n11_alocucionPasajeros: false,
+            n11_pccInformado: false,
+            n7_puertasConfirmadasFD: false,
+            n7_despreparadoHS: false,
+            n7_preparadoEN: false
+        };
+
+        const ayudaMemoria = {
+            2: [
+                "Informar a pasajeros por PACIS (detención prolongada).",
+                "Solicitar instrucción a P.C.C. por TETRA.",
+                "Equipar: chaleco, radio y llave de bloqueo.",
+                "Salir de cabina a la puerta averiada.",
+                "Juntar hojas manualmente.",
+                "Bloquear con llave de bloqueo.",
+                "Verificar enclavamiento con las manos.",
+                "Instalar cinta amarilla.",
+                "Volver a cabina.",
+                "Cerrar puertas (FD/FG) y verificar LMF + Monocoup.",
+                "Verificar puerta en amarillo en DDU.",
+                "Informar término a P.C.C. por TETRA."
+            ],
+            3: [
+                "Recibir instrucción de P.C.C. por TETRA.",
+                "Equipar: chaleco, radio y llave triangular.",
+                "Salir a primera puerta primer coche (lado andén).",
+                "Girar llave de servicio 1/4 vuelta horario.",
+                "Verificar luz roja fija de aviso de cierre.",
+                "Abrir puerta con las manos.",
+                "Informar evacuación por PACIS.",
+                "Verificar DDU (puerta blanca + alarma liberada).",
+                "Normalizar llave de servicio.",
+                "Cerrar puerta con las manos / automático.",
+                "Volver a cabina.",
+                "Informar término a P.C.C. por TETRA."
+            ],
+            7: [
+                "Verificar puertas cerradas (LMF + Monocoup).",
+                "Informar apagado de alumbrado por PACIS.",
+                "Disponer SC en CML.",
+                "Disponer ST en lado servicio.",
+                "Disponer KLVR en Neutro.",
+                "Presionar HS (Despreparar).",
+                "Esperar 10 segundos.",
+                "Presionar EN (Preparar).",
+                "Presionar DAP FI (desaplicar FI).",
+                "Informar deslocalización a P.C.C. por TETRA."
+            ],
+            8: [
+                "Confirmar instrucción de P.C.C. por TETRA.",
+                "Disponer SC en CMC.",
+                "Ir a armario BT3 (mamparo trasero derecho).",
+                "Pulsar botón rojo bajo tapa por 5 segundos.",
+                "Volver a pupitre y esperar 20 segundos.",
+                "Verificar platina SACEM (PA, CMC, CMP parpadeantes).",
+                "Informar término a P.C.C. por TETRA."
+            ],
+            10: [
+                "Confirmar instrucción de P.C.C. por TETRA.",
+                "Disponer SC en FS, ST en N, KLVR en Neutro (esperar 5 s).",
+                "Retomar mandos: SC en CMC, ST en AUTO.",
+                "Pulsar FD/FG (Monocoup).",
+                "Si gatilla FU PA: Asegurar puertas cerradas, informar por PACIS, HS, esperar 10 s, EN, DAP FI.",
+                "Informar estado a P.C.C. por TETRA."
+            ],
+            11: [
+                "Girar K.IH.KSA a Aislado y pulsar FD (Monocoup).",
+                "Mirar espejos/ventanas hacia atrás.",
+                "Aceptar llamada en PACIS.",
+                "Identificar puerta en DDU.",
+                "Informar a P.C.C. por TETRA (recibir orden de retroceso).",
+                "Informar retroceso por PACIS.",
+                "Disponer SC en CML, KLVR en Atrás.",
+                "Pulsar FD (verificar LMF + Monocoup).",
+                "Verificar andén desde puerta cabina (sin despeje).",
+                "Abrir espejo retrovisor derecho.",
+                "Retroceder a máximo 5 Km/h.",
+                "Detener frente a letrero 'No Pasar'.",
+                "Disponer ST en Derecha y comandar K.L.O.AN.",
+                "Normalizar KLVR y K.IH.KSA.",
+                "Equipar: chaleco, radio y llave triangular.",
+                "Salir a salón y girar K.SA 1/4 vuelta antihorario.",
+                "Verificar apagado de luz de cierre y luz fija de coche.",
+                "Volver a cabina e informar término a P.C.C. por TETRA."
+            ]
+        };
+
+        function toggleAyudaMemoria() {
+            document.getElementById('sidebar-ayuda').classList.toggle('open');
+        }
+
+        function cargarAyudaMemoria() {
+            const listaUl = document.getElementById('lista-ayuda');
+            listaUl.innerHTML = '';
+            (ayudaMemoria[nivelActual] || []).forEach(item => {
+                const li = document.createElement('li');
+                li.innerText = item;
+                listaUl.appendChild(li);
+            });
+        }
+
+        function inicializarSimulador() {
+            const urlParams = new URLSearchParams(window.location.search);
+            nivelActual = parseInt(urlParams.get('nivel')) || 11;
+            estacionActual = estacionesL2[Math.floor(Math.random() * estacionesL2.length)];
+            trenNumero = 100 + Math.floor(Math.random() * 20);
+
+            simulacionFinalizadaCritical = false;
+            cargarAyudaMemoria();
+
+            if (nivelActual === 2) {
+                actualizarPanel("2. Bloqueo de Puertas", `Estación ${estacionActual} - Tren ${trenNumero}\nPuerta de pasajeros averiada. Realice el procedimiento normativo de bloqueo de puerta.`);
+            } else if (nivelActual === 3) {
+                actualizarPanel("3. Liberación de Puertas", `Estación ${estacionActual} - Tren ${trenNumero}\nSe requiere evacuación de pasajeros. Ejecute la liberación manual de la primera puerta.`);
+            } else if (nivelActual === 7) {
+                actualizarPanel("7. Reseteo de Tren en Estación", `Estación ${estacionActual} - Tren ${trenNumero}\nSistemas informáticos bloqueados. Se requiere reseteo de cabina en estación conforme a norma.`);
+            } else if (nivelActual === 8) {
+                actualizarPanel("8. Reseteo Ordenador SACEM", `Estación ${estacionActual} - Tren ${trenNumero}\n⚠️ Platina del SACEM completamente APAGADA.\nSiguiendo instrucciones de PCC, disponga SC en CMC y accione el botón Reset SACEM (BT3) por 5s.`);
+            } else if (nivelActual === 10) {
+                actualizarPanel("10. Reseteo Platina SACEM", `Estación ${estacionActual} - Tren ${trenNumero}\n⚠️ Platina del SACEM congelada en FIJO.\nBajo instrucciones de PCC, deje mandos en neutro y vuelva a tomarlos.`);
+            } else if (nivelActual === 11) {
+                actualizarPanel("11. KSA en PA con Retroceso", `Estación ${estacionActual} - Tren ${trenNumero}\n🚨 Alarma de Pasajero (K.SA) activada en PA. Atienda la llamada y aplique protocolo con retroceso.`);
+            }
+        }
+
+        function cambiarVista(vista) {
+            if (simulacionFinalizadaCritical) return;
+            document.querySelectorAll('.vista-container').forEach(el => el.classList.remove('activa'));
+            document.querySelectorAll('.btn-nav').forEach(el => el.classList.remove('activo'));
+
+            if (vista === 'pupitre') {
+                document.getElementById('vista-pupitre').classList.add('activa');
+                document.getElementById('btn-vista-pupitre').classList.add('activo');
+            } else {
+                document.getElementById('vista-bt3').classList.add('activa');
+                document.getElementById('btn-vista-bt3').classList.add('activo');
+            }
+            setTimeout(() => { imageMapResize(); }, 50);
+        }
+
+        function actualizarPanel(titulo, desc) {
+            document.getElementById('info-titulo').innerText = titulo;
+            document.getElementById('info-desc').innerText = desc;
+        }
+
+        function reproducirSonidoMonocoup() {
+            const audio = document.getElementById('audio-monocoup');
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(e => console.log("Audio no reproducido por interacción previa."));
+            }
+        }
+
+        function abrirArmarioEquipamiento() {
+            if (simulacionFinalizadaCritical) return;
+            document.getElementById('modalArmario').style.display = 'flex';
+        }
+
+        function guardarEquipamiento() {
+            equipamiento.chaleco = document.getElementById('eq-chaleco').checked;
+            equipamiento.radio = document.getElementById('eq-radio').checked;
+            equipamiento.llave = document.getElementById('eq-llave').checked;
+            equipamiento.paleta = document.getElementById('eq-paleta').checked;
+            equipamiento.linterna = document.getElementById('eq-linterna').checked;
+            equipamiento.extintor = document.getElementById('eq-extintor').checked;
+            equipamiento.escalera = document.getElementById('eq-escalera').checked;
+
+            document.getElementById('modalArmario').style.display = 'none';
+            actualizarPanel("¿Qué llevar?", "🎒 Elementos seleccionados guardados en equipamiento.");
+        }
+
+        function gatillarGameOverCritico(mensaje) {
+            simulacionFinalizadaCritical = true;
+            let box = document.getElementById('modal-box');
+            document.getElementById('modal-titulo').innerText = "⚡ ACCIDENTE CRÍTICO DE SEGURIDAD";
+            document.getElementById('modal-titulo').className = "game-over-title";
+            
+            box.className = "modal-content game-over-modal";
+            
+            let container = document.getElementById('modal-options');
+            container.innerHTML = `
+                <p style="color:#ff8888; font-weight:bold; font-size:14px;">${mensaje}</p>
+                <button class="btn-ui btn-reset" style="margin-top:15px;" onclick="location.reload()">Reiniciar Simulador</button>
+            `;
+            document.getElementById('modalSelector').style.display = 'flex';
+        }
+
+        function interactuarPACIS() {
+            if (simulacionFinalizadaCritical) return;
+            document.getElementById('modal-titulo').innerText = 'Sistema PACIS / Interfonía';
+            let container = document.getElementById('modal-options');
+            container.innerHTML = '';
+
+            if (nivelActual === 11) {
+                let btnAtender = document.createElement('button');
+                btnAtender.className = 'btn-opt';
+                btnAtender.innerHTML = '📞 Validar / Atender comunicación de emergencia K.SA';
+                btnAtender.onclick = () => {
+                    estadoActual.n11_comunicacionKsaAtendida = true;
+                    document.getElementById('modalSelector').style.display = 'none';
+                    actualizarPanel("PACIS - Interfonía", "📞 Comunicación de emergencia K.SA atendida y validada.");
+                };
+                container.appendChild(btnAtender);
+
+                let btnAnuncio = document.createElement('button');
+                btnAnuncio.className = 'btn-opt';
+                btnAnuncio.innerHTML = '📢 Informar a pasajeros el motivo de detención y movimiento de retroceso';
+                btnAnuncio.onclick = () => {
+                    estadoActual.n11_alocucionPasajeros = true;
+                    document.getElementById('modalSelector').style.display = 'none';
+                    actualizarPanel("PACIS - Altavoces", "📢 Anuncio emitido a salón: Se informa a los pasajeros el retroceso asistido del tren.");
+                };
+                container.appendChild(btnAnuncio);
+            } else {
+                let btnAnuncio = document.createElement('button');
+                btnAnuncio.className = 'btn-opt';
+                btnAnuncio.innerHTML = '📢 Emitir alocución general a pasajeros';
+                btnAnuncio.onclick = () => {
+                    document.getElementById('modalSelector').style.display = 'none';
+                    actualizarPanel("Megafonía PACIS", "📢 Alocución emitida a los pasajeros.");
+                };
+                container.appendChild(btnAnuncio);
+            }
+
+            document.getElementById('modalSelector').style.display = 'flex';
+        }
+
+        function abrirOpcionesTETRA() {
+            if (simulacionFinalizadaCritical) return;
+            document.getElementById('modal-titulo').innerText = 'Micrófono TETRA - P.C.C.';
+            let container = document.getElementById('modal-options');
+            container.innerHTML = '';
+
+            let btnPcc = document.createElement('button');
+            btnPcc.className = 'btn-opt';
+            btnPcc.innerHTML = '📻 Comunicar novedad / Solicitar autorización a P.C.C.';
+            btnPcc.onclick = () => {
+                estadoActual.n11_pccInformado = true;
+                document.getElementById('modalSelector').style.display = 'none';
+                actualizarPanel("P.C.C.", `📻 P.C.C.: "Enterado Conductor Tren ${trenNumero}. Autorizado retroceso conforme a norma."`);
+            };
+            container.appendChild(btnPcc);
+
+            document.getElementById('modalSelector').style.display = 'flex';
+        }
+
+        function interactuarDDU() {
+            if (simulacionFinalizadaCritical) return;
+            actualizarPanel("Pantalla DDU", "[DDU - Monitor de Estado]\nVisualización de puertas y estado de alarmas de emergencia activa.");
+        }
+
+        function abrirSelector(elemento, opciones) {
+            if (simulacionFinalizadaCritical) return;
+            document.getElementById('modal-titulo').innerText = `${elemento} (Actual: ${estadoActual[elemento] || 'NORMAL'})`;
+            let container = document.getElementById('modal-options');
+            container.innerHTML = '';
+            opciones.forEach(opc => {
+                let btn = document.createElement('button');
+                btn.className = 'btn-opt';
+                btn.innerText = opc;
+                btn.onclick = () => seleccionarOpcion(elemento, opc);
+                container.appendChild(btn);
+            });
+            document.getElementById('modalSelector').style.display = 'flex';
+        }
+
+        function seleccionarOpcion(elemento, opcion) {
+            document.getElementById('modalSelector').style.display = 'none';
+            estadoActual[elemento] = opcion;
+            actualizarPanel(`Mando ${elemento}`, `Posición seleccionada: ${opcion}`);
+        }
+
+        function accionBoton(tipo) {
+            if (simulacionFinalizadaCritical) return;
+            if (tipo === 'FG' || tipo === 'FD') {
+                reproducirSonidoMonocoup();
+            } else if (tipo === 'HS') {
+                if (nivelActual === 7 && !estadoActual.n7_puertasConfirmadasFD) {
+                    gatillarGameOverCritico("⚡ ACCIDENTE CRÍTICO DE SEGURIDAD\nEjecutó la des-preparación del tren (HS) sin haber confirmado enclavamiento de puertas con FD/FG.");
+                    return;
+                }
+            }
+            actualizarPanel("Acción Pupitre", `Pulsador ${tipo} activado.`);
+        }
+
+        function accionResetSacem() {
+            if (simulacionFinalizadaCritical) return;
+            actualizarPanel("BT3 - Reset SACEM", "🔴 Botón Reset SACEM accionado.");
+        }
+
+        function resetearSimulador() { inicializarSimulador(); }
+
+        function evaluarProcedimiento() {
+            if (simulacionFinalizadaCritical) return;
+            let errores = [];
+
+            if (nivelActual === 11) {
+                if (estadoActual.K_IH_KSA !== 'AISLADO') errores.push("• BT3: Faltó aislar la alarma K.SA situando el conmutador K.IH.KSA en 'AISLADO'.");
+                if (!estadoActual.n11_comunicacionKsaAtendida) errores.push("• PACIS: Faltó contestar/atender la llamada de comunicación de emergencia K.SA.");
+                if (!estadoActual.n11_pccInformado) errores.push("• TETRA: Faltó solicitar autorización a P.C.C. antes de iniciar maniobra de retroceso.");
+                if (!estadoActual.n11_alocucionPasajeros) errores.push("• PACIS: Faltó informar a los pasajeros sobre la maniobra de retroceso asistido.");
+                if (estadoActual.KLVR !== 'ATRÁS') errores.push("• INVERSOR: KLVR debía estar en 'ATRÁS' para ejecutar la maniobra.");
+            }
+
+            let msg = errores.length === 0 ? 
+                "🟢 EVALUACIÓN: APROBADO (100%)\nProcedimiento normativo ejecutado con estricto apego a las normas." : 
+                "🔴 EVALUACIÓN: REPROBADO\nSe detectaron las siguientes omisiones normativas al terminar el ejercicio:\n\n" + errores.join("\n");
+            
+            actualizarPanel("EVALUACIÓN DEL PROCEDIMIENTO", msg);
+        }
+
+        window.onload = () => { 
+            inicializarSimulador(); 
+            setTimeout(() => { imageMapResize(); }, 200);
+        };
+        window.onresize = () => { imageMapResize(); };
+    </script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menú - Simulador NS-16</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #0f172a; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    header { text-align: center; margin-bottom: 30px; }
+    h1 { color: #38bdf8; font-size: 2rem; margin-bottom: 5px; }
+    p { color: #94a3b8; font-size: 1rem; }
+    .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; width: 100%; max-width: 1000px; }
+    .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; transition: transform 0.2s, border-color 0.2s; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; }
+    .card:hover { transform: translateY(-3px); border-color: #38bdf8; }
+    .badge { background-color: #0284c7; color: #fff; font-size: 0.75rem; font-weight: bold; padding: 4px 8px; border-radius: 4px; width: fit-content; margin-bottom: 10px; }
+    .card h3 { color: #f1f5f9; font-size: 1.1rem; margin-bottom: 10px; }
+    .btn-start { background-color: #0284c7; color: white; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 15px; }
+    .btn-start:hover { background-color: #0369a1; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Simulador Técnico Operativo NS-16</h1>
+    <p>Selecciona un nivel de entrenamiento para iniciar la simulación normativa</p>
+  </header>
+
+  <div class="grid-container">
+    <div class="card" onclick="cargarNivel(2)">
+      <div>
+        <span class="badge">NIVEL 2</span>
+        <h3>Bloqueo de Puertas</h3>
+      </div>
+      <button class="btn-start">Iniciar Nivel</button>
+    </div>
+
+    <div class="card" onclick="cargarNivel(3)">
+      <div>
+        <span class="badge">NIVEL 3</span>
+        <h3>Liberación de Puertas (Evacuación)</h3>
+      </div>
+      <button class="btn-start">Iniciar Nivel</button>
+    </div>
+
+    <div class="card" onclick="cargarNivel(7)">
+      <div>
+        <span class="badge">NIVEL 7</span>
+        <h3>Reseteo de Tren en Estación</h3>
+      </div>
+      <button class="btn-start">Iniciar Nivel</button>
+    </div>
+
+    <div class="card" onclick="cargarNivel(8)">
+      <div>
+        <span class="badge">NIVEL 8</span>
+        <h3>Reseteo Ordenador SACEM (BT3)</h3>
+      </div>
+      <button class="btn-start">Iniciar Nivel</button>
+    </div>
+
+    <div class="card" onclick="cargarNivel(10)">
+      <div>
+        <span class="badge">NIVEL 10</span>
+        <h3>Reseteo de Platina SACEM</h3>
+      </div>
+      <button class="btn-start">Iniciar Nivel</button>
+    </div>
+
+    <div class="card" onclick="cargarNivel(11)">
+      <div>
+        <span class="badge">NIVEL 11</span>
+        <h3>KSA en PA con Retroceso (Andén Derecho)</h3>
+      </div>
+      <button class="btn-start">Iniciar Nivel</button>
+    </div>
+  </div>
+
+  <script>
+    function cargarNivel(nivelId) {
+      window.location.href = `simulador.html?nivel=${nivelId}`;
+    }
+  </script>
+</body>
+</html>
