@@ -208,9 +208,12 @@
             SC: 'PA', ST: 'AUTO', KLVR: 'ADELANTE', MANIPULADOR: 'NEUTRO',
             KLOAN: 'DESAUTORIZADO', K_AA_IZ: 'NEUTRO / BLOQUEADO', RETROVISORES: 'NEUTRO / CERRADO', K_IH_KSA: 'NORMAL',
             
-            // Nivel 2 y 3
+            // Nivel 2
             n2_puertaBloqueada: false,
             n2_cintaPuesta: false,
+
+            // Nivel 3
+            n3_tapaAbierta: false,
             n3_puertaLiberada: false,
 
             // Nivel 7
@@ -263,10 +266,10 @@
 
             switch (nivelActual) {
                 case 2:
-                    actualizarPanel("2. Bloqueo Manual de Puertas", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Falla de enclavamiento de puertas en coche de salón.\nAcción: Equípese adecuadamente, diríjase al salón, condene y bloquee la puerta averiada.`);
+                    actualizarPanel("2. Bloqueo Manual de Puertas", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Falla de enclavamiento de puertas en coche de salón.\nAcción: Equípese adecuadamente con llave triangular, diríjase al salón, condene y bloquee la puerta averiada, e instale la cinta "Fuera de Servicio".`);
                     break;
                 case 3:
-                    actualizarPanel("3. Liberación Manual de Puertas", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Instrucción de evacuación dictada por P.C.C.\nAcción: Equípese adecuadamente, acceda al salón y ejecute la liberación manual de puertas con la llave triangular.`);
+                    actualizarPanel("3. Liberación Manual de Puertas", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Instrucción de evacuación dictada por P.C.C.\nAcción: Equípese adecuadamente con llave triangular, acceda al salón, abra la tapa de protección y ejecute la liberación manual de puertas.`);
                     break;
                 case 4:
                     actualizarPanel("4. Aislamiento Freno Neumático (XFR)", `Estación ${estacionActual} - Tren ${trenNumero}\nSÍNTOMA: Falla grave de frenado detectada en Coche Motriz.\nAcción: Aplique corte de corriente con Ruptor en andén e intervenga llaves XFR/XFI según protocolo.`);
@@ -336,65 +339,86 @@
             actualizarPanel("Equipamiento", "Elementos de protección y herramientas guardados correctamente.");
         }
 
+        // INTERACCIÓN DE SALÓN RESTAURADA CON MENÚS COMPLETOS
         function interactuarPuertaSalon() {
             if (simulacionFinalizadaCritical) return;
 
             if (ubicacionActual === 'CABINA') {
                 ubicacionActual = 'SALON';
                 document.getElementById('btn-ext-salon').innerText = "Volver a la Cabina";
-                actualizarPanel("Salón de Pasajeros", "Te encuentras en el salón de pasajeros del coche.");
+                actualizarPanel("Salón de Pasajeros", "Te encuentras en el salón de pasajeros junto al coche afectado.\nSelecciona la intervención a realizar en la puerta.");
 
                 if (nivelActual === 2) {
-                    abrirMenuBloqueoSaloon();
+                    abrirMenuPuertaNivel2();
                 } else if (nivelActual === 3) {
-                    abrirMenuLiberacionSaloon();
+                    abrirMenuPuertaNivel3();
                 }
             } else {
                 ubicacionActual = 'CABINA';
                 document.getElementById('btn-ext-salon').innerText = "Salir de la cabina";
-                actualizarPanel("Cabina de Conducción", "Has regresado a la cabina principal.");
+                actualizarPanel("Cabina de Conducción", "Has regresado a la cabina principal de conducción.");
             }
         }
 
-        function abrirMenuBloqueoSaloon() {
-            elementoActualModal = 'BLOQUEO_N2';
-            document.getElementById('modal-titulo').innerText = 'Mecanismo de Puerta - Nivel 2';
+        function abrirMenuPuertaNivel2() {
+            elementoActualModal = 'MECANISMO_PUERTA_N2';
+            document.getElementById('modal-titulo').innerText = 'Mecanismo de Puerta - Nivel 2 (Avería)';
             let container = document.getElementById('modal-options');
+            
             container.innerHTML = `
-                <button class="btn-opt" onclick="ejecutarBloqueoManual()">🔒 Usar Llave Triangular para Condenar y Bloquear Puerta</button>
+                <button class="btn-opt" onclick="ejecutarAccionSalon('LLAVE_TRIANGULAR_BLOQUEO')">🔑 Usar Llave Triangular para condenar/bloquear puerta</button>
+                <button class="btn-opt" onclick="ejecutarAccionSalon('COLOCAR_CINTA')">🎗️ Colocar cinta de 'Fuera de Servicio'</button>
             `;
             document.getElementById('modalSelector').style.display = 'flex';
         }
 
-        function ejecutarBloqueoManual() {
-            document.getElementById('modalSelector').style.display = 'none';
-            if (!equipamiento.llave) {
-                actualizarPanel("Salón de Pasajeros", "❌ ERROR: No llevas la Llave Triangular equipada. Vuelve a la cabina e insértala desde '🎒 ¿Qué llevar?'.");
-                return;
-            }
-            estadoActual.n2_puertaBloqueada = true;
-            estadoActual.n2_cintaPuesta = true;
-            actualizarPanel("Salón de Pasajeros", "🔒 PUERTA CONDENADA: Has bloqueado la puerta con la llave triangular e instalado la cinta de 'Fuera de Servicio'. Regresa a cabina para reportar a P.C.C.");
-        }
-
-        function abrirMenuLiberacionSaloon() {
-            elementoActualModal = 'LIBERACION_N3';
-            document.getElementById('modal-titulo').innerText = 'Mecanismo de Puerta - Nivel 3';
+        function abrirMenuPuertaNivel3() {
+            elementoActualModal = 'MECANISMO_PUERTA_N3';
+            document.getElementById('modal-titulo').innerText = 'Mecanismo de Puerta - Nivel 3 (Evacuación)';
             let container = document.getElementById('modal-options');
+            
             container.innerHTML = `
-                <button class="btn-opt" onclick="ejecutarLiberacionManual()">🔑 Usar Llave Triangular y accionar Palanca de Liberación</button>
+                <button class="btn-opt" onclick="ejecutarAccionSalon('LLAVE_TRIANGULAR_LIBERACION')">🔑 Desbloquear tapa con Llave Triangular</button>
+                <button class="btn-opt" onclick="ejecutarAccionSalon('ACCIONAR_PALANCA_LIBERACION')">🚨 Accionar Palanca / Lazo de Liberación Manual</button>
             `;
             document.getElementById('modalSelector').style.display = 'flex';
         }
 
-        function ejecutarLiberacionManual() {
+        function ejecutarAccionSalon(accion) {
             document.getElementById('modalSelector').style.display = 'none';
-            if (!equipamiento.llave) {
-                actualizarPanel("Salón de Pasajeros", "❌ ERROR: No llevas la Llave Triangular equipada. Vuelve a la cabina e insértala desde '🎒 ¿Qué llevar?'.");
-                return;
+
+            if (accion === 'LLAVE_TRIANGULAR_BLOQUEO') {
+                if (!equipamiento.llave) {
+                    actualizarPanel("Salón - ERROR", "❌ No puedes operar el mecanismo: Olvidaste equiparte la Llave Triangular en la cabina.");
+                    return;
+                }
+                estadoActual.n2_puertaBloqueada = true;
+                actualizarPanel("Salón de Pasajeros", "🔒 Mecanismo girado con la Llave Triangular: La puerta ha sido bloqueada y condenada mecánicamente.");
+
+            } else if (accion === 'COLOCAR_CINTA') {
+                if (!estadoActual.n2_puertaBloqueada) {
+                    actualizarPanel("Salón - ADVERTENCIA", "⚠️ Primero debes bloquear la puerta con la llave triangular antes de colocar la cinta.");
+                    return;
+                }
+                estadoActual.n2_cintaPuesta = true;
+                actualizarPanel("Salón de Pasajeros", "🎗️ Cinta de 'Fuera de Servicio' instalada cruzando las hojas de la puerta.");
+
+            } else if (accion === 'LLAVE_TRIANGULAR_LIBERACION') {
+                if (!equipamiento.llave) {
+                    actualizarPanel("Salón - ERROR", "❌ No puedes abrir la tapa de protección: Te falta la Llave Triangular.");
+                    return;
+                }
+                estadoActual.n3_tapaAbierta = true;
+                actualizarPanel("Salón de Pasajeros", "🔑 Tapa de protección desbloqueada e inspeccionada con la Llave Triangular.");
+
+            } else if (accion === 'ACCIONAR_PALANCA_LIBERACION') {
+                if (!estadoActual.n3_tapaAbierta) {
+                    actualizarPanel("Salón - ADVERTENCIA", "⚠️ Debes abrir la tapa con la llave triangular antes de acceder a la palanca.");
+                    return;
+                }
+                estadoActual.n3_puertaLiberada = true;
+                actualizarPanel("Salón de Pasajeros", "🔓 PALANCA ACCIONADA: Se ha ejecutado la liberación manual de la puerta. Las hojas han sido abiertas.");
             }
-            estadoActual.n3_puertaLiberada = true;
-            actualizarPanel("Salón de Pasajeros", "🔓 LIBERACIÓN MANUAL EJECUTADA: Has abierto el mecanismo con la llave triangular y accionado la palanca. Regresa a cabina para reportar a P.C.C.");
         }
 
         function interactuarRuptor() {
@@ -719,11 +743,13 @@
             let errores = [];
 
             if (nivelActual === 2) {
-                if (!equipamiento.llave) errores.push("• EQUIPAMIENTO: Faltó equipar la Llave Triangular.");
-                if (!estadoActual.n2_puertaBloqueada) errores.push("• INTERVENCIÓN: Faltó realizar el bloqueo/condenación manual de la puerta.");
+                if (!equipamiento.llave) errores.push("• EQUIPAMIENTO: No equipaste la Llave Triangular antes de salir al salón.");
+                if (!estadoActual.n2_puertaBloqueada) errores.push("• INTERVENCIÓN: No condenaste ni bloqueaste la puerta con la llave triangular.");
+                if (!estadoActual.n2_cintaPuesta) errores.push("• SEGURIDAD: Faltó colocar la cinta 'Fuera de Servicio' en las hojas de la puerta.");
             } else if (nivelActual === 3) {
-                if (!equipamiento.llave) errores.push("• EQUIPAMIENTO: Faltó equipar la Llave Triangular.");
-                if (!estadoActual.n3_puertaLiberada) errores.push("• INTERVENCIÓN: Faltó accionar la liberación manual de la puerta en salón.");
+                if (!equipamiento.llave) errores.push("• EQUIPAMIENTO: No equipaste la Llave Triangular.");
+                if (!estadoActual.n3_tapaAbierta) errores.push("• INTERVENCIÓN: No desbloqueaste la tapa con la llave triangular.");
+                if (!estadoActual.n3_puertaLiberada) errores.push("• INTERVENCIÓN: Faltó accionar la palanca de liberación manual de la puerta.");
             } else if (nivelActual === 8) {
                 if (estadoActual.SC !== 'CMC') errores.push("• SC: Faltó disponer el conmutador SC en 'CMC'.");
                 if (!estadoActual.n8_resetSacemPresionado5s) errores.push("• BT3: Faltó pulsar el botón rojo 'Reset SACEM' por 5 segundos.");
